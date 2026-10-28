@@ -1,0 +1,27 @@
+<div class="modal-backdrop" id="buzzwordsModal" onclick="if(event.target===this)closeModal('buzzwordsModal')">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span class="t-icon rose">🏷️</span>
+        <span>AI Buzzword &amp; Formulaic Idiom Scanner</span>
+      </div>
+      <button class="modal-close" onclick="closeModal('buzzwordsModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:0.84rem;color:var(--text-muted);margin-bottom:16px;line-height:1.6">
+        Nucleus sampling in modern LLMs causes extreme over-representation of specific academic idioms and transitional clichés. This module isolates each occurrence with its severity weight.
+      </p>
+
+      <div id="bwModalContent">
+        <div style="text-align:center;padding:30px;color:var(--text-muted);font-size:0.85rem">
+          Click <strong>Scan Text</strong> to evaluate formulaic phrase patterns in your document.
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:20px">
+        <button class="btn-ghost" onclick="loadPreset('ai'); closeModal('buzzwordsModal'); runDetect();">Load Benchmark AI Sample</button>
+        <button class="btn-primary" onclick="closeModal('buzzwordsModal'); openHumanizerModal();">✨ Open Humanizer</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "veritext-veritas"
+version = "2.5.0"
+description = "Local academic writing, AI text, paraphrase, and humanizer workbench"
+readme = "README.md"
+requires-python = ">=3.10"
+dynamic = ["dependencies"]
+
+[project.scripts]
+veritext = "backend.app:main"
+
+[tool.setuptools.packages.find]
+include = ["backend*"]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
+
+[tool.setuptools.data-files]
+"share/veritext/templates" = [
+  "frontend/templates/index.html",
+  "frontend/templates/partials/*.html",
+  "frontend/templates/partials/modals/*.html"
+]
+"share/veritext/static/css" = ["frontend/static/css/app.css"]

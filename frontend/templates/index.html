@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Veritext</title>
+  <meta name="description" content="Easy-to-use AI writing and copied-text checker that works locally on your computer.">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}?v=20261028">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%235b5ce2'/%3E%3Cpath d='M19 39h26M23 32h18M27 25h10' stroke='white' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
+</head>
+<body>
+{% include "partials/header.html" %}
+{% include "partials/hero.html" %}
+{% include "partials/detector.html" %}
+{% include "partials/sentence-results.html" %}
+{% include "partials/buzzwords.html" %}
+{% include "partials/modals/history.html" %}
+{% include "partials/footer.html" %}
+<div id="toast"></div>
+{% include "partials/modals/humanizer.html" %}
+{% include "partials/modals/writing-style.html" %}
+{% include "partials/modals/buzzwords.html" %}
+{% include "partials/modals/upload.html" %}
+{% include "partials/modals/audit.html" %}
+{% include "partials/modals/api.html" %}
+{% include "partials/modals/benchmarks.html" %}
+<script>
+// ─── Theme Management (Light by Default + Dark Mode Support) ─────
+function initTheme() {
+  const saved = localStorage.getItem('vt_theme') || 'light';
+  applyTheme(saved);
+}
+
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  localStorage.setItem('vt_theme', t);
+  const icon = document.getElementById('themeToggleIcon');
+  const txt = document.getElementById('themeToggleText');
+  if (t === 'dark') {
+    if (icon) icon.textContent = '🌙';
+    if (txt) txt.textContent = 'Dark';
+  } else {
+    if (icon) icon.textContent = '☀️';
+    if (txt) txt.textContent = 'Light';
+  }
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'light';
+  const next = current === 'dark' ? 'light' : 'dark';
+  applyTheme(next);
+  toast(`Switched to ${next === 'light' ? 'Clean Light' : 'Dark Obsidian'} theme`);
+}
+
+initTheme();
+
+// ─── Preset Benchmark Corpus ─────────────────────────────────────
+const PRESETS = {
+  ai: {
+    a: `In today's rapidly evolving digital landscape, artificial intelligence plays a pivotal role in transforming educational paradigms. By leveraging the power of deep learning, institutions can seamlessly integrate modern tools to foster unprecedented innovation. In conclusion, navigating this multifaceted realm underscores the paramount importance of continuous adaptation.`,
+    ref: ''
+  },
+  human: {
+    a: `We spent three weeks interviewing 42 farmers across the western district to understand why crop yields dropped significantly after the 2022 drought. Surprisingly, despite receiving subsidized irrigation pumps, over 68% of smallholders could not afford fuel costs. Field notes revealed that local cooperatives had previously organized shared tractor rotations, but maintenance disputes dismantled the program by mid-2023.`,
+    ref: ''
+  },
+  mixed: {
+    a: `The results of this agricultural study demonstrate a pivotal shift in scientific understanding. Furthermore, data collected from seventeen participants across four districts reveal significant variation in seasonal rainfall patterns. Consequently, farmers adapted their agricultural practices by introducing drought-resistant cassava varieties — a genuinely transformative approach that no policy document had anticipated. However, three elderly women recalled cultivation techniques from 1953 that no academic publication had ever documented, which underscores the gap between holistic indigenous knowledge and the rigid frameworks of contemporary research.`,
+    ref: ''
+  },
+  plagiarism: {
+    a: `Some copy checkers only look for the same exact words. They may miss text that has been rewritten with new words. This tool also compares the meaning of the words to find rewritten text that still copies an idea.`,
+    ref: `Traditional plagiarism detection tools mainly rely on comparing words and sentence structures, making them less effective at identifying AI-assisted paraphrasing and the replacement of words with similar meanings. Modern generative AI and rephrasing tools can modify sentence structures and vocabulary while maintaining the original meaning, causing traditional plagiarism checkers to report 0% similarity even when the content has been copied or rewritten.`
+  }
+};
+
+let allSentences = [];
+let lastAnalysisData = null;
+let currentFilter = 'all';
+let threshold = 0.70;
+let refOpen = false;
+
+// ─── Hyperlink & Tool Routing Engine ─────────────────────────────
+function selectTool(toolKey) {
+  closeAllDropdowns();
+  updateUrlHash(toolKey);
+
+  // Update quick bar and nav active state
+  document.querySelectorAll('.tq-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.nav-links .nav-link').forEach(b => b.classList.remove('active'));
+
+  const quickBtn = document.getElementById(`tb-${toolKey === 'plagiarism' ? 'plag' : toolKey === 'stylometrics' ? 'metrics' : toolKey}`);
+  if(quickBtn) quickBtn.classList.add('active');
+
+  const navBtn = document.getElementById(`nav-${toolKey}`);
+  if(navBtn) navBtn.classList.add('active');
+
+  const indicator = document.getElementById('toolStateIndicator');
+
+  if(toolKey === 'detector') {
+    if(indicator) indicator.textContent = '● AI Check Active';
+    document.getElementById('mainInput').scrollIntoView({behavior:'smooth', block:'center'});
+    document.getElementById('mainInput').focus();
+    toast('Switched to AI Content Detector');
+  } else if(toolKey === 'humanizer') {
+    openHumanizerModal();
+  } else if(toolKey === 'plagiarism') {
+    if(indicator) indicator.textContent = '● Paraphrase Plagiarism Mode';
+    if(!refOpen) toggleRef();
+    document.getElementById('refInput').scrollIntoView({behavior:'smooth', block:'center'});
+    document.getElementById('refInput').focus();
+    toast('Plagiarism Comparison Mode Active');
+  } else if(toolKey === 'stylometrics') {
+    openStylometricsModal();
+  } else if(toolKey === 'buzzwords') {
+    openBuzzwordsModal();
+  } else if(toolKey === 'upload') {
+    openUploadModal();
+  } else if(toolKey === 'audit') {
+    openAuditModal();
+  } else if(toolKey === 'api') {
+    openApiModal();
+  }
+}
+
+function updateUrlHash(hash) {
+  if (window.history.pushState) {
+    window.history.pushState(null, null, `#${hash}`);
+  } else {
+    window.location.hash = hash;
+  }
+}
+
+// Handle Direct Anchor Navigation / URL Bookmark loading
+function handleHashRoute() {
+  const hash = window.location.hash.replace('#', '').trim().toLowerCase();
+  if(!hash) return;
+  if(hash === 'detector') selectTool('detector');
+  else if(hash === 'humanizer') openHumanizerModal();
+  else if(hash === 'plagiarism') selectTool('plagiarism');
+  else if(hash === 'stylometrics') openStylometricsModal();
+  else if(hash === 'buzzwords') openBuzzwordsModal();
+  else if(hash === 'upload') openUploadModal();
+  else if(hash === 'audit') openAuditModal();
+  else if(hash === 'history') openHistoryModal();
+  else if(hash === 'api') openApiModal();
+}
+
+window.addEventListener('hashchange', handleHashRoute);
+window.addEventListener('DOMContentLoaded', () => {
+  handleHashRoute();
+  refreshGemmaAvailability();
+});
+
+async function refreshGemmaAvailability() {
+  const gemmaOption = document.querySelector('#humanizeBackend option[value="gemma"]');
+  if(!gemmaOption) return;
+  try {
+    const res = await fetch('/api/health');
+    const health = await res.json();
+    gemmaOption.disabled = !health.gemma_configured;
+    gemmaOption.textContent = health.gemma_configured ? 'Gemma API' : 'Gemma API (configure key)';
+    if(!health.gemma_configured && document.getElementById('humanizeBackend').value === 'gemma') {
+      document.getElementById('humanizeBackend').value = 'local';
+    }
+  } catch(_) {
+    gemmaOption.disabled = true;
+    gemmaOption.textContent = 'Gemma API (server unavailable)';
+  }
+}
+
+// ─── Modal Open/Close System ─────────────────────────────────────
+function openModal(id) {
+  closeAllModals();
+  const m = document.getElementById(id);
+  if(m) m.classList.add('open');
+}
+
+function closeModal(id) {
+  const m = document.getElementById(id);
+  if(m) m.classList.remove('open');
+}
+
+function closeAllModals() {
+  document.querySelectorAll('.modal-backdrop').forEach(m => m.classList.remove('open'));
+}
+
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Escape') closeAllModals();
+});
+
+// ─── Tools Menu Dropdown ─────────────────────────────────────────
+function toggleToolsMenu(e) {
+  if(e) e.stopPropagation();
+  const m = document.getElementById('toolsMenu');
+  const arr = document.getElementById('toolsArrow');
+  const isOpen = m.classList.toggle('open');
+  if(arr) arr.style.transform = isOpen ? 'rotate(180deg)' : 'none';
+}
+
+function closeAllDropdowns() {
+  const m = document.getElementById('toolsMenu');
+  const arr = document.getElementById('toolsArrow');
+  if(m) m.classList.remove('open');
+  if(arr) arr.style.transform = 'none';
+}
+
+document.addEventListener('click', (e) => {
+  const c = document.getElementById('toolsDropdownContainer');
+  if(c && !c.contains(e.target)) closeAllDropdowns();
+});
+
+// ─── Preset Loader ───────────────────────────────────────────────
+function loadPreset(key) {
+  const p = PRESETS[key];
+  document.getElementById('mainInput').value = p.a;
+  document.getElementById('refInput').value = p.ref;
+  if(p.ref && !refOpen) toggleRef();
+  else if(!p.ref && refOpen && key !== 'plagiarism') toggleRef();
+  updateCounts();
+  runDetect();
+}
+
+function toggleRef() {
+  refOpen = !refOpen;
+  document.getElementById('refBox').style.display = refOpen ? 'block' : 'none';
+  document.getElementById('refToggleIcon').textContent = refOpen ? '▼' : '▶';
+  document.getElementById('refToggleBtn').style.background = refOpen ? 'rgba(217,119,6,.12)' : 'var(--bg-surface)';
+}
+
+async function pasteClipboard() {
+  try {
+    const txt = await navigator.clipboard.readText();
+    document.getElementById('mainInput').value = txt;
+    updateCounts();
+    toast('Pasted from clipboard');
+  } catch {
+    toast('Clipboard permission denied — paste manually');
+  }
+}
+
+function clearAll() {
+  document.getElementById('mainInput').value = '';
+  document.getElementById('refInput').value = '';
+  updateCounts();
+  document.getElementById('rightPanel').innerHTML = `
+    <div class="score-card">
+      <div class="empty-rp" id="emptyState">
+        <div class="empty-rp-icon">🧪</div>
+        <div class="empty-rp-title">Writing Check Ready</div>
+        <div class="empty-rp-desc">Paste your text on the left or select a benchmark preset above, then click <strong>Detect AI &amp; Plagiarism</strong>.</div>
+      </div>
+    </div>`;
+  document.getElementById('heatmap-section').style.display = 'none';
+  document.getElementById('buzzwords-section').style.display = 'none';
+  allSentences = [];
+  lastAnalysisData = null;
+  toast('Editor cleared');
+}
+
+function updateCounts() {
+  const txt = document.getElementById('mainInput').value;
+  const words = txt.trim() ? txt.trim().split(/\s+/).length : 0;
+  const sents = txt.trim() ? txt.split(/[.!?]+\s+/).filter(s => s.trim().length > 3).length : 0;
+  document.getElementById('wCount').textContent = words.toLocaleString();
+  document.getElementById('sCount').textContent = sents;
+}
+
+document.getElementById('mainInput').addEventListener('input', updateCounts);
+
+// ─── Main Forensic Analysis Engine ───────────────────────────────
+async function checkCitedSources() {
+  const status = document.getElementById('sourceCheckStatus');
+  const sources = document.getElementById('sourceCitations').value.split(/\n/).map(item => item.trim()).filter(Boolean);
+  if(!sources.length) {
+    status.innerHTML = '<span class="source-state source-missing">Enter a URL, DOI, or citation to check.</span>';
+    return;
+  }
+  status.innerHTML = '<span class="source-state source-checking">Verifying and locating cited sources…</span>';
+  try {
+    const res = await fetch('/api/sources/resolve', {
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ sources })
+    });
+    const data = await res.json();
+    if(!res.ok || !data.success) throw new Error(data.error || 'Source verification failed');
+    status.innerHTML = data.sources.map((source, index) => {
+      if(source.exists && source.text_available) return `<div class="source-state source-found"><strong>${index + 1}. Found & accessible</strong><br><span>${escapeHtml(source.title || source.input)}</span></div>`;
+      if(source.exists) return `<div class="source-state source-found"><strong>${index + 1}. Exists, but text is unavailable</strong><br><span>${escapeHtml(source.title || source.input)}</span></div>`;
+      return `<div class="source-state source-missing"><strong>${index + 1}. Source could not be verified</strong><br><span>${escapeHtml(source.input)}</span></div>`;
+    }).join('');
+  } catch(err) {
+    status.innerHTML = `<span class="source-state source-missing">${escapeHtml(err.message)}</span>`;
+  }
+}
+
+async function runDetect() {
+  const text = document.getElementById('mainInput').value.trim();
+  if(!text) {
+    toast('Please enter or paste text to analyze.');
+    return;
+  }
+
+  const btn = document.getElementById('detectBtn');
+  btn.disabled = true;
+  document.getElementById('detectIcon').className = 'spin';
+  document.getElementById('detectIcon').textContent = '⟳';
+  document.getElementById('detectTxt').textContent = 'Analyzing…';
+
+  document.getElementById('rightPanel').innerHTML = buildShimmer();
+  const refText = document.getElementById('refInput').value.trim();
+  const sources = document.getElementById('sourceCitations').value.split(/\n/).map(item => item.trim()).filter(Boolean);
+
+  try {
+    const res = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text_a: text, text_b: refText, sources, threshold })
+    });
+    const d = await res.json();
+    if(!d.success) {
+      toast(`Error: ${d.error}`);
+      restoreBtn();
+      return;
+    }
+
+    lastAnalysisData = d;
+    saveToAppHistory('check', {
+      input: text,
+      reference: refText,
+      aiProbability: d.ai_probability,
+      copiedProbability: d.overall_similarity,
+      verdict: d.verdict
+    });
+    renderResults(d);
+  } catch(err) {
+    toast('Cannot connect to server. Ensure veritext_app.py is running on port 5050.');
+    restoreBtn();
+    document.getElementById('rightPanel').innerHTML = buildEmptyState();
+  }
+}
+
+function restoreBtn() {
+  const btn = document.getElementById('detectBtn');
+  btn.disabled = false;
+  document.getElementById('detectIcon').className = '';
+  document.getElementById('detectIcon').textContent = '🔍';
+  document.getElementById('detectTxt').textContent = 'Detect AI & Plagiarism';
+}
+
+function buildShimmer() {
+  return `<div class="score-card"><div style="padding:10px">
+    <div class="shimmer" style="height:170px;border-radius:50%;width:170px;margin:0 auto 24px"></div>
+    <div class="shimmer" style="margin-bottom:14px;width:60%;margin-left:auto;margin-right:auto"></div>
+    <div class="shimmer" style="margin-bottom:10px"></div>
+    <div class="shimmer" style="margin-bottom:10px;width:80%"></div>
+    <div class="shimmer" style="width:70%"></div>
+  </div></div>`;
+}
+
+function buildEmptyState() {
+  return `<div class="score-card">
+    <div class="empty-rp" id="emptyState">
+      <div class="empty-rp-icon">🧪</div>
+      <div class="empty-rp-title">Writing Check Ready</div>
+      <div class="empty-rp-desc">Paste your text on the left and click <strong>Detect AI &amp; Plagiarism</strong>.</div>
+    </div>
+  </div>`;
+}
+
+// ─── Render Results into Right Panel ─────────────────────────────
+function renderResults(d) {
+  restoreBtn();
+  allSentences = d.sentences || [];
+
+  const aiPct = d.ai_probability;
+  const humPct = d.human_probability;
+
+  // Calibrated Verdict Color
+  const gaugeColor = aiPct >= 80 ? '#EF4444' : aiPct >= 55 ? '#F59E0B' : aiPct >= 30 ? '#6366F1' : '#10B981';
+  const circum = 2 * Math.PI * 54;
+  const offset = circum - (aiPct / 100) * circum;
+
+  const verdictText = d.verdict || 'Analysis Complete';
+  const verdictDesc = d.verdict_desc || '';
+  const vc = aiPct >= 80 ? 'danger' : aiPct >= 55 ? 'warning' : aiPct >= 30 ? 'accent' : 'success';
+  const icons = { danger: '🔴', warning: '🟡', accent: '🟣', success: '🟢' };
+
+  const m = d.ai_metrics || {};
+  const burstColor = m.burstiness < -0.3 ? 'var(--accent-rose)' : m.burstiness > 0 ? 'var(--accent-emerald)' : 'var(--accent-amber)';
+  const pplColor = m.avg_ppl < 15 ? 'var(--accent-rose)' : m.avg_ppl > 22 ? 'var(--accent-emerald)' : 'var(--accent-amber)';
+
+  document.getElementById('rightPanel').innerHTML = `
+    <div class="score-card">
+      <div class="gauge-wrap">
+        <div class="gauge-ring-outer">
+          <svg class="gauge-svg" viewBox="0 0 120 120">
+            <circle class="gauge-bg" cx="60" cy="60" r="54"/>
+            <circle class="gauge-fill"
+              cx="60" cy="60" r="54"
+              stroke="${gaugeColor}"
+              stroke-dasharray="${circum}"
+              stroke-dashoffset="${offset}"
+              style="filter:drop-shadow(0 2px 8px ${gaugeColor}66)"
+              id="gaugeFill"
+            />
+          </svg>
+          <div class="gauge-center">
+            <div class="gauge-pct" style="color:${gaugeColor}">${aiPct.toFixed(0)}<span style="font-size:1.3rem">%</span></div>
+            <div class="gauge-lbl">AI Probability</div>
+          </div>
+        </div>
+        <div class="verdict-pill ${vc}">${icons[vc]} ${verdictText}</div>
+      </div>
+
+      <div class="dual-bars">
+        <div class="bar-row bar-ai">
+          <div class="bar-label">
+            <span style="color:var(--accent-rose)">🤖 AI Probability</span>
+            <span style="color:var(--accent-rose);font-family:'JetBrains Mono'">${aiPct.toFixed(0)}%</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill" style="width:${aiPct}%"></div></div>
+        </div>
+        <div class="bar-row bar-human">
+          <div class="bar-label">
+            <span style="color:var(--accent-emerald)">✅ Human Probability</span>
+            <span style="color:var(--accent-emerald);font-family:'JetBrains Mono'">${humPct.toFixed(0)}%</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill" style="width:${humPct}%"></div></div>
+        </div>
+        ${d.has_reference ? `
+        <div class="bar-row">
+          <div class="bar-label">
+            <span style="color:var(--accent-amber)">📋 Paraphrase Overlap</span>
+            <span style="color:var(--accent-amber);font-family:'JetBrains Mono'">${d.plagiarism_rate.toFixed(0)}%</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill" style="width:${d.plagiarism_rate}%;background:linear-gradient(90deg,var(--accent-amber),var(--accent-rose))"></div></div>
+        </div>` : ''}
+      </div>
+
+      ${d.source_reports && d.source_reports.length ? `<div class="source-report-list">
+        <div class="source-report-title">Cited source verification</div>
+        ${d.source_reports.map((source, index) => source.exists ?
+          `<div class="source-report-item source-report-found">✓ ${index + 1}. ${escapeHtml(source.title || source.input)}${source.text_available ? ' — compared directly' : ' — existence verified; text unavailable'}</div>` :
+          `<div class="source-report-item source-report-missing">! ${index + 1}. ${escapeHtml(source.input)} — source could not be verified${source.error ? `<small>${escapeHtml(source.error)}</small>` : ''}</div>`).join('')}
+      </div>` : ''}
+
+      <div class="mini-metrics">
+        <div class="mini-tile">
+          <div class="mini-tile-lbl">Average Word Surprise</div>
+          <div class="mini-tile-val" style="color:${pplColor}">${(m.avg_ppl || 0).toFixed(1)}</div>
+          <div class="mini-tile-hint">Surprisal Metric</div>
+        </div>
+        <div class="mini-tile">
+          <div class="mini-tile-lbl">Writing Rhythm</div>
+          <div class="mini-tile-val" style="color:${burstColor}">${(m.burstiness || 0).toFixed(3)}</div>
+          <div class="mini-tile-hint">How much sentence length changes</div>
+        </div>
+        <div class="mini-tile">
+          <div class="mini-tile-lbl">Word Variety</div>
+          <div class="mini-tile-val" style="color:var(--brand-indigo)">${(m.lexical_ttr || 0).toFixed(3)}</div>
+          <div class="mini-tile-hint">How varied the vocabulary is</div>
+        </div>
+        <div class="mini-tile">
+          <div class="mini-tile-lbl">Flagged Sentences</div>
+          <div class="mini-tile-val" style="color:var(--accent-rose)">${m.ai_sentence_count || 0} / ${m.total_sentences || 0}</div>
+          <div class="mini-tile-hint">Synthetic Transitions</div>
+        </div>
+      </div>
+
+      <div class="verdict-desc-box">${verdictDesc}</div>
+
+      <div class="score-ctas">
+        <button class="cta-btn cta-primary" onclick="document.getElementById('heatmap-section').scrollIntoView({behavior:'smooth'})">
+          🗂️ View Highlights
+        </button>
+        <button class="cta-btn cta-secondary" onclick="copyReport()">
+          📋 Copy Report
+        </button>
+        <button class="cta-btn" style="background:#0284C7;color:#fff" onclick="downloadPdfDossier()">
+          📥 Export PDF Dossier
+        </button>
+      </div>
+    </div>
+
+    <!-- Cryptographic Verification Preview Box -->
+    <div style="background:var(--bg-card);border:1px solid var(--border-card);border-radius:16px;box-shadow:var(--card-shadow);padding:18px 20px;font-size:0.75rem">
+      <div style="font-weight:700;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;color:var(--text-main)">
+        <span style="display:flex;align-items:center;gap:6px">🔐 Signed Copy Check</span>
+        <a href="#audit" onclick="openAuditModal(); return false;" style="color:var(--brand-indigo);text-decoration:none;font-size:0.72rem;font-weight:700">View Full Seal →</a>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:5px;font-family:'JetBrains Mono',monospace">
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text-dim)">SHA-256 (Doc A):</span><span style="color:var(--accent-sky)">${(d.sha_a || '').slice(0, 16)}…</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text-dim)">Audit Seal:</span><span style="color:var(--accent-emerald)">${(d.audit_seal || '').slice(0, 16)}…</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text-dim)">Latency:</span><span style="color:var(--text-main)">${d.latency}</span></div>
+      </div>
+    </div>
+  `;
+
+  // Populate Audit Modal
+  document.getElementById('audit-sha-a').textContent = d.sha_a || '--';
+  document.getElementById('audit-sha-b').textContent = d.sha_b || 'None Provided';
+  document.getElementById('audit-seal-val').textContent = d.audit_seal || '--';
+  document.getElementById('audit-time-val').textContent = d.timestamp || new Date().toISOString();
+
+  // Populate Buzzwords
+  renderBuzzwords(d.detected_buzzwords || [], d.detected_phrases || []);
+
+  // Populate Sentences
+  renderSentences('all');
+  document.getElementById('heatmap-section').style.display = 'block';
+  document.getElementById('buzzwords-section').style.display = 'block';
+}
+
+function renderBuzzwords(bw, phrases) {
+  const wrap = document.getElementById('buzzTagsWrap');
+  if(!bw.length && !phrases.length) {
+    wrap.innerHTML = '<span class="buzz-tag btag-none">✓ No formulaic AI buzzwords or LLM marker idioms detected</span>';
+    return;
+  }
+  let html = '';
+  bw.forEach(b => {
+    html += `<span class="buzz-tag btag-ai">⚠ "${b.word}" ×${b.count}</span>`;
+  });
+  phrases.forEach(p => {
+    const lbl = (p.phrase || '').replace(/\\b/g, '').replace(/\\/g, '').slice(0, 42);
+    html += `<span class="buzz-tag btag-phrase">💬 "${lbl}"</span>`;
+  });
+  wrap.innerHTML = html;
+}
+
+// ─── Sentence Heatmap Filter & Render ────────────────────────────
+function filterSents(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('#heatmap-section .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderSentences(f);
+}
+
+function updateThreshold(val) {
+  threshold = parseFloat(val) / 100.0;
+  document.getElementById('threshVal').textContent = `${val}%`;
+  const text = document.getElementById('mainInput').value.trim();
+  const refText = document.getElementById('refInput').value.trim();
+  if(text && refText) runDetect();
+}
+
+function renderSentences(f) {
+  let list = allSentences;
+  if(f === 'high')       list = allSentences.filter(s => s.similarity >= 85.0);
+  else if(f === 'paraphrase') list = allSentences.filter(s => s.similarity >= 70.0 && s.similarity < 85.0);
+  else if(f === 'ai')    list = allSentences.filter(s => s.is_ai && s.similarity < 70.0);
+  else if(f === 'clean') list = allSentences.filter(s => !s.is_ai && s.similarity < 70.0);
+
+  const container = document.getElementById('sentList');
+  if(!list.length) {
+    container.innerHTML = `<div class="empty-rp" style="padding:40px 20px"><div class="empty-rp-desc">No sentences match this specific filter.</div></div>`;
+    return;
+  }
+
+  container.innerHTML = list.map(s => {
+    let borderCls = 'border-left: 4px solid #10B981; background: rgba(16,185,129,.03)';
+    let tierBadge = `<span class="sent-badge" style="background:rgba(16,185,129,.12);color:#059669">🟢 Original Human</span>`;
+
+    if(s.similarity >= 85.0) {
+      borderCls = 'border-left: 4px solid #EF4444; background: rgba(239,68,68,.05)';
+      tierBadge = `<span class="sent-badge" style="background:rgba(239,68,68,.12);color:#DC2626">🔴 High Match (${s.similarity.toFixed(0)}%)</span>`;
+    } else if(s.similarity >= 70.0) {
+      borderCls = 'border-left: 4px solid #F59E0B; background: rgba(245,158,11,.05)';
+      tierBadge = `<span class="sent-badge" style="background:rgba(245,158,11,.12);color:#D97706">🟡 Paraphrase (${s.similarity.toFixed(0)}%)</span>`;
+    } else if(s.is_ai) {
+      borderCls = 'border-left: 4px solid #8B5CF6; background: rgba(139,92,246,.05)';
+      tierBadge = `<span class="sent-badge" style="background:rgba(139,92,246,.12);color:#7C3AED">🟣 AI (${s.ai_prob}%)</span>`;
+    }
+
+    const pplB = `<span class="sent-badge badge-ppl">Word surprise ${s.ppl.toFixed(1)}</span>`;
+    const markerBs = (s.markers || []).map(m => `<span class="sent-badge badge-marker">⚠ ${m}</span>`).join('');
+    const matchBlock = (s.similarity >= 70.0 && s.matched_clause)
+      ? `<div style="background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:6px;padding:8px 12px;margin-top:8px">
+           <span style="color:var(--text-dim);font-size:0.68rem;text-transform:uppercase;font-weight:700">Matching Source Text:</span><br>
+           <strong style="color:${s.similarity>=85?'#DC2626':'#D97706'};font-size:0.83rem">"${esc(s.matched_clause)}"</strong>
+         </div>` : '';
+
+    return `
+      <div class="sent-item" style="${borderCls}">
+        <span class="sent-num">${s.id}</span>
+        <div class="sent-content">
+          <div style="font-size:0.89rem;line-height:1.75;color:var(--text-main)">${esc(s.text)}</div>
+          <div class="sent-badges">${tierBadge}${pplB}${markerBs}</div>
+          ${matchBlock}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function esc(s) {
+  return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+const APP_HISTORY_KEY = 'veritext_app_history_v1';
+const APP_HISTORY_LIMIT = 50;
+
+function getAppHistory() {
+  try { return JSON.parse(localStorage.getItem(APP_HISTORY_KEY) || '[]'); }
+  catch(_) { return []; }
+}
+
+function saveToAppHistory(type, details) {
+  const item = {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    type,
+    createdAt: new Date().toISOString(),
+    details
+  };
+  const history = [item, ...getAppHistory()].slice(0, APP_HISTORY_LIMIT);
+  localStorage.setItem(APP_HISTORY_KEY, JSON.stringify(history));
+}
+
+function openHistoryModal() {
+  updateUrlHash('history');
+  renderAppHistory();
+  openModal('historyModal');
+}
+
+function renderAppHistory() {
+  const list = document.getElementById('historyList');
+  const history = getAppHistory();
+  if(!history.length) {
+    list.innerHTML = '<div style="text-align:center;padding:36px 16px;color:var(--text-muted)">No saved checks yet.<br>Run a writing check or use the humanizer to build your history.</div>';
+    return;
+  }
+  list.innerHTML = history.map((item, index) => {
+    const d = item.details || {};
+    const text = d.input || '';
+    const preview = text.length > 150 ? `${text.slice(0, 150)}…` : text;
+    const when = new Date(item.createdAt).toLocaleString([], {dateStyle:'medium', timeStyle:'short'});
+    const title = item.type === 'humanized' ? 'Text Humanized' : 'Writing Check';
+    const score = item.type === 'humanized'
+      ? `${Number(d.before || 0).toFixed(0)}% AI → ${Number(d.after || 0).toFixed(0)}% AI`
+      : `${Number(d.aiProbability || 0).toFixed(0)}% likely AI-written`;
+    return `<div style="border:1px solid var(--border-subtle);border-radius:10px;padding:14px;background:var(--bg-input)">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">
+        <div style="min-width:0"><strong>${title}</strong><div style="font-size:.72rem;color:var(--text-muted);margin:3px 0">${esc(when)}</div></div>
+        <strong style="font-size:.78rem;color:${item.type === 'humanized' ? 'var(--accent-emerald)' : 'var(--brand-violet)'};white-space:nowrap">${esc(score)}</strong>
+      </div>
+      <div style="font-size:.82rem;color:var(--text-main);line-height:1.55;margin:10px 0;white-space:pre-wrap">${esc(preview)}</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-ghost" onclick="restoreHistoryItem(${index})">Open Again</button>
+        <button class="btn-ghost" onclick="deleteHistoryItem('${item.id}')">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function restoreHistoryItem(index) {
+  const item = getAppHistory()[index];
+  if(!item) return;
+  closeModal('historyModal');
+  if(item.type === 'humanized') {
+    document.getElementById('humanizerInput').value = item.details.input || '';
+    document.getElementById('humanizerOutput').value = item.details.output || '';
+    if(document.querySelector(`#humanizeMode option[value="${item.details.mode}"]`)) document.getElementById('humanizeMode').value = item.details.mode;
+    openHumanizerModal();
+  } else {
+    document.getElementById('mainInput').value = item.details.input || '';
+    document.getElementById('refInput').value = item.details.reference || '';
+    updateCounts();
+    document.getElementById('mainInput').scrollIntoView({behavior:'smooth', block:'center'});
+    runDetect();
+  }
+}
+
+function deleteHistoryItem(id) {
+  localStorage.setItem(APP_HISTORY_KEY, JSON.stringify(getAppHistory().filter(item => item.id !== id)));
+  renderAppHistory();
+}
+
+function clearAppHistory() {
+  if(!confirm('Delete all saved checks and rewritten text from this browser?')) return;
+  localStorage.removeItem(APP_HISTORY_KEY);
+  renderAppHistory();
+  toast('History cleared');
+}
+
+// ─── Modal 1: Humanizer Logic ────────────────────────────────────
+function openHumanizerModal() {
+  updateUrlHash('humanizer');
+  const inp = document.getElementById('humanizerInput');
+  const mainVal = document.getElementById('mainInput').value.trim();
+  if(!inp.value.trim() && mainVal) inp.value = mainVal;
+  openModal('humanizerModal');
+}
+
+async function runHumanize() {
+  const txt = document.getElementById('humanizerInput').value.trim();
+  if(!txt) { toast('Please enter text to humanize'); return; }
+
+  const btn = document.getElementById('btnRunHumanize');
+  btn.disabled = true;
+  btn.textContent = 'Restructuring…';
+
+  try {
+    const res = await fetch('/api/humanize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: txt,
+        mode: document.getElementById('humanizeMode').value,
+        intensity: Number(document.getElementById('humanizeIntensity').value),
+        backend: document.getElementById('humanizeBackend').value
+      })
+    });
+    const d = await res.json();
+    if(!res.ok || !d.success) {
+      const message = d.error || 'Humanization request failed';
+      toast(`Error: ${message}`);
+      return;
+    }
+    document.getElementById('humanizerOutput').value = d.humanized;
+    saveToAppHistory('humanized', {
+      input: txt,
+      output: d.humanized,
+      before: d.original_ai_prob,
+      after: d.humanized_ai_prob,
+      backend: d.backend || document.getElementById('humanizeBackend').value,
+      mode: document.getElementById('humanizeMode').value
+    });
+    const pill = document.getElementById('humScorePill');
+      pill.style.display = 'inline-block';
+      pill.textContent = `${d.original_ai_prob.toFixed(0)}% AI ➔ ${d.humanized_ai_prob.toFixed(0)}% AI (-${d.prob_reduction}%)`;
+
+      const impBox = document.getElementById('humanizerImprovements');
+      const impList = document.getElementById('improvementsList');
+      if(d.improvements && d.improvements.length) {
+        impBox.style.display = 'block';
+        impList.innerHTML = d.improvements.map(i => `<li>${esc(i)}</li>`).join('');
+      } else {
+        impBox.style.display = 'none';
+      }
+    toast('✓ Text successfully humanized!');
+  } catch(err) {
+    toast('Cannot connect to humanizer API');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✨ Humanize Text Now';
+  }
+}
+
+function copyHumanizedText() {
+  const val = document.getElementById('humanizerOutput').value;
+  if(!val) { toast('Nothing to copy'); return; }
+  navigator.clipboard.writeText(val).then(() => toast('Humanized text copied!')).catch(() => toast('Copy failed'));
+}
+
+function applyHumanizedToDetector() {
+  const val = document.getElementById('humanizerOutput').value;
+  if(!val) { toast('No humanized output yet'); return; }
+  document.getElementById('mainInput').value = val;
+  updateCounts();
+  closeModal('humanizerModal');
+  selectTool('detector');
+  runDetect();
+  toast('Transferred to detector & initiated scan!');
+}
+
+// ─── Modal 2: Stylometrics Modal Logic ───────────────────────────
+function openStylometricsModal() {
+  updateUrlHash('stylometrics');
+  if(!lastAnalysisData) {
+    const txt = document.getElementById('mainInput').value.trim();
+    if(txt) {
+      runDetect().then(() => populateStylometricsModal());
+    } else {
+      loadPreset('mixed');
+      setTimeout(populateStylometricsModal, 500);
+    }
+  } else {
+    populateStylometricsModal();
+  }
+  openModal('stylometricsModal');
+}
+
+function populateStylometricsModal() {
+  if(!lastAnalysisData) return;
+  const m = lastAnalysisData.ai_metrics || {};
+  document.getElementById('sm-burst').textContent = (m.burstiness || 0).toFixed(3);
+  document.getElementById('sm-ppl').textContent = (m.avg_ppl || 0).toFixed(1);
+  document.getElementById('sm-ttr').textContent = (m.lexical_ttr || 0).toFixed(3);
+  document.getElementById('sm-yule').textContent = (m.yules_k || 0).toFixed(1);
+
+  const sents = lastAnalysisData.sentences || [];
+  const barsWrap = document.getElementById('sm-cadence-bars');
+  if(sents.length) {
+    const lens = sents.map(s => s.words || s.text.split(/\s+/).length);
+    const maxLen = Math.max(...lens, 1);
+    document.getElementById('sm-cadence-desc').textContent = `${sents.length} Sentences · Range: ${Math.min(...lens)} to ${maxLen} words`;
+
+    barsWrap.innerHTML = lens.map((l, i) => {
+      const hPct = Math.round((l / maxLen) * 100);
+      const col = l > 28 ? '#D97706' : l < 10 ? '#0284C7' : '#059669';
+      return `<div style="flex:1;height:${hPct}%;background:${col};border-radius:3px 3px 0 0;min-width:6px;transition:height .3s" title="Sentence ${i+1}: ${l} words"></div>`;
+    }).join('');
+  }
+}
+
+// ─── Modal 3: Buzzwords Modal Logic ──────────────────────────────
+function openBuzzwordsModal() {
+  updateUrlHash('buzzwords');
+  const bwWrap = document.getElementById('bwModalContent');
+  if(lastAnalysisData) {
+    const bws = lastAnalysisData.detected_buzzwords || [];
+    const phs = lastAnalysisData.detected_phrases || [];
+    if(!bws.length && !phs.length) {
+      bwWrap.innerHTML = `<div style="text-align:center;padding:30px;color:var(--accent-emerald)">✓ Clean text! No synthetic buzzwords found.</div>`;
+    } else {
+      let h = `<div style="margin-bottom:14px;font-size:0.82rem;color:var(--accent-rose);font-weight:700">Total High-Frequency LLM Markers Found: ${bws.length + phs.length}</div><div style="display:flex;flex-wrap:wrap;gap:8px">`;
+      bws.forEach(b => { h += `<span class="buzz-tag btag-ai">⚠ "${b.word}" (Count: ${b.count})</span>`; });
+      phs.forEach(p => { const lbl = (p.phrase||'').replace(/\\b/g,''); h += `<span class="buzz-tag btag-phrase">💬 "${lbl}"</span>`; });
+      h += `</div>`;
+      bwWrap.innerHTML = h;
+    }
+  } else {
+    bwWrap.innerHTML = `<div style="text-align:center;padding:30px;color:var(--text-muted)">Please run detection on your text first to isolate buzzwords.</div>`;
+  }
+  openModal('buzzwordsModal');
+}
+
+// ─── Modal 4: Document Upload Modal Logic ────────────────────────
+function openUploadModal() {
+  updateUrlHash('upload');
+  openModal('uploadModal');
+}
+
+async function uploadDocument(file) {
+  if(!file) return;
+  const allowed = /\.(pdf|docx|txt)$/i.test(file.name);
+  if(!allowed) { toast('Choose a PDF, DOCX, or TXT document'); return; }
+  if(file.size > 32 * 1024 * 1024) { toast('Document must be 32 MB or smaller'); return; }
+
+  const fd = new FormData();
+  fd.append('file', file);
+  const progress = document.getElementById('uploadProgress');
+  progress.hidden = false;
+  document.getElementById('uploadStatusBox').style.display = 'none';
+  document.getElementById('btnUploadAnalyze').style.display = 'none';
+
+  try {
+    const res = await fetch('/api/upload', { method: 'POST', body: fd });
+    const d = await res.json();
+    if(!res.ok || !d.success) throw new Error(d.error || 'Upload failed');
+
+    document.getElementById('mainInput').value = d.text;
+    updateCounts();
+    document.getElementById('uploadStatusBox').style.display = 'block';
+    document.getElementById('uploadFileName').textContent = `✓ ${d.filename}`;
+    document.getElementById('uploadFileMeta').textContent = `Parsed ${d.word_count} words across ${d.sentence_count} sentences.`;
+    document.getElementById('btnUploadAnalyze').style.display = 'inline-flex';
+    saveToAppHistory('upload', { filename: d.filename, words: d.word_count });
+    toast(`✓ ${file.name} is ready to analyze`);
+  } catch(err) {
+    toast(err.message || 'Upload failed — ensure the server is active');
+  } finally {
+    progress.hidden = true;
+    document.getElementById('hiddenFileInput').value = '';
+  }
+}
+
+function handleModalUpload(e) { uploadDocument(e.target.files[0]); }
+
+function activateDocumentDropZone() {
+  const zone = document.getElementById('dropZone');
+  if(!zone || zone.dataset.ready) return;
+  zone.dataset.ready = 'true';
+  for(const eventName of ['dragenter', 'dragover']) {
+    zone.addEventListener(eventName, event => { event.preventDefault(); zone.classList.add('is-dragging'); });
+  }
+  for(const eventName of ['dragleave', 'drop']) {
+    zone.addEventListener(eventName, event => { event.preventDefault(); zone.classList.remove('is-dragging'); });
+  }
+  zone.addEventListener('drop', event => uploadDocument(event.dataTransfer.files[0]), { once: false });
+}
+
+document.addEventListener('DOMContentLoaded', activateDocumentDropZone);
+
+// ─── Modal 5: Cryptographic Audit Modal Logic ────────────────────
+
+function openBenchmarkModal() {
+  updateUrlHash('benchmarks');
+  openModal('benchmarkModal');
+}
+
+async function downloadPdfDossier() {
+  const d = lastAnalysisData;
+  if(!d) {
+    toast('Run a scan first to generate a PDF dossier');
+    return;
+  }
+  toast('Generating cryptographic PDF dossier…');
+  try {
+    const res = await fetch('/api/export-pdf', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        sha_a: d.sha_a,
+        sha_b: d.sha_b,
+        audit_seal: d.audit_seal,
+        composite_risk: d.composite_risk,
+        paraphrase_rate: d.paraphrase_rate || 0,
+        ai_probability: d.ai_probability,
+        burstiness: d.ai_metrics ? d.ai_metrics.burstiness : 0,
+        latency: d.latency,
+        timestamp: d.timestamp
+      })
+    });
+    if(!res.ok) throw new Error('PDF export failed');
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Veritext_Veritext_Audit_Dossier_${Date.now()}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+    toast('✓ PDF Dossier downloaded successfully');
+  } catch(err) {
+    toast('Failed to download PDF dossier: ' + err.message);
+  }
+}
+
+function openAuditModal() {
+  updateUrlHash('audit');
+  openModal('auditModal');
+}
+
+function copyAuditReport() {
+  const a = document.getElementById('audit-sha-a').textContent;
+  const s = document.getElementById('audit-seal-val').textContent;
+  const t = document.getElementById('audit-time-val').textContent;
+  const report = `Veritext CRYPTOGRAPHIC AUDIT CERTIFICATE\n==========================================\nPrimary Text SHA-256: ${a}\nForensic Seal: ${s}\nTimestamp: ${t}\nVerification: VERIFIED UNMODIFIED (100% LOCAL)`;
+  navigator.clipboard.writeText(report).then(() => toast('Audit certificate copied!')).catch(() => toast('Copy failed'));
+}
+
+// ─── Modal 6: Developer REST API Modal Logic ─────────────────────
+function openApiModal() {
+  updateUrlHash('api');
+  openModal('apiModal');
+}
+
+async function testLiveApi() {
+  const consoleBox = document.getElementById('apiTestConsole');
+  consoleBox.textContent = 'Pinging http://127.0.0.1:5050/api/health …';
+  try {
+    const t0 = performance.now();
+    const r = await fetch('/api/health');
+    const d = await r.json();
+    const ms = Math.round(performance.now() - t0);
+    consoleBox.textContent = `HTTP 200 OK (${ms}ms latency)\nResponse:\n` + JSON.stringify(d, null, 2);
+  } catch(err) {
+    consoleBox.textContent = 'Error: Cannot connect to server on port 5050.';
+  }
+}
+
+// ─── Clipboard & Export ──────────────────────────────────────────
+function copyReport() {
+  if(!allSentences.length) { toast('No report to copy'); return; }
+  const lines = allSentences.map(s => `[Sentence ${s.id}] [${s.is_ai ? 'AI ' + s.ai_prob + '%' : 'Human'}] ${s.text}`);
+  navigator.clipboard.writeText(lines.join('\n')).then(() => toast('Forensic report copied!')).catch(() => toast('Copy failed'));
+}
+
+function escapeHtml(value) {
+  const node = document.createElement('div');
+  node.textContent = String(value == null ? '' : value);
+  return node.innerHTML;
+}
+
+// ─── Toast System ────────────────────────────────────────────────
+function toast(msg, ms = 2800) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.style.display = 'none', ms);
+}
+
+// ─── Initial Server Health Check ─────────────────────────────────
+(async () => {
+  try {
+    const r = await fetch('/api/health');
+    const d = await r.json();
+    if(d.status !== 'healthy') throw new Error();
+  } catch {
+    toast('⚠ Veritext server offline. Starting python server...', 4000);
+  }
+})();
+</script>
+</body>
+</html>

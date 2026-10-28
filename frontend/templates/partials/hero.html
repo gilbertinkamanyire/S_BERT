@@ -1,0 +1,66 @@
+<!-- ═══════════════════════════════════════════════════════════════
+     HERO SECTION
+════════════════════════════════════════════════════════════════ -->
+<section class="hero wrap">
+  <div class="hero-kicker">Private writing review</div>
+  <h1>Check your writing for<br><em>AI patterns and copied meaning</em></h1>
+  <p class="hero-sub">One clear workspace for AI writing, matching sources, writing style, and humanized suggestions. Your text stays on this computer.</p>
+
+  <div class="hero-stats">
+    <div class="hero-stat">
+      <div class="hero-stat-num">384-D</div>
+      <div class="hero-stat-lbl">Sentence-BERT vectors</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-num">Cosine</div>
+      <div class="hero-stat-lbl">Meaning similarity</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-num">PPL + B</div>
+      <div class="hero-stat-lbl">Perplexity and burstiness</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-num">Local</div>
+      <div class="hero-stat-lbl">Private use</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TOOLS QUICK BAR (Functional Hyperlinks)
+════════════════════════════════════════════════════════════════ -->
+<div class="tools-quick-bar wrap">
+  <span class="tq-label">Active Engine:</span>
+  <a href="#detector" class="tq-btn active" id="tb-detector" onclick="selectTool('detector'); return false;">🤖 AI Detector</a>
+  <a href="#humanizer" class="tq-btn" id="tb-humanizer" onclick="openHumanizerModal(); return false;">✨ AI Humanizer</a>
+  <a href="#plagiarism" class="tq-btn" id="tb-plag" onclick="selectTool('plagiarism'); return false;">📋 Plagiarism Check</a>
+  <a href="#stylometrics" class="tq-btn" id="tb-metrics" onclick="openStylometricsModal(); return false;">📊 Writing Style</a>
+  <a href="#buzzwords" class="tq-btn" id="tb-buzz" onclick="openBuzzwordsModal(); return false;">🏷️ Buzzword Hunter</a>
+  <a href="#upload" class="tq-btn" id="tb-upload" onclick="openUploadModal(); return false;">📁 Doc Ingest</a>
+  <a href="#audit" class="tq-btn" id="tb-audit" onclick="openAuditModal(); return false;">🔐 SHA-256 Seal</a>
+  <a href="#benchmarks" class="tq-btn" id="tb-bench" onclick="openBenchmarkModal(); return false;">🎓 Research Benchmarks</a>
+  <a href="#api" class="tq-btn" id="tb-api" onclick="openApiModal(); return false;">💻 REST API</a>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PRESET SAMPLES STRIP
+════════════════════════════════════════════════════════════════ -->
+<div class="sample-strip wrap">
+  <span class="sample-lbl">Load Benchmark Sample:</span>
+  <button class="sample-btn" onclick="loadPreset('ai')">
+    <span class="s-dot" style="background:var(--accent-rose)"></span>
+    Pure AI Essay (ChatGPT/Claude)
+  </button>
+  <button class="sample-btn" onclick="loadPreset('human')">
+    <span class="s-dot" style="background:var(--accent-emerald)"></span>
+    Authentic Human Field Research
+  </button>
+  <button class="sample-btn" onclick="loadPreset('mixed')">
+    <span class="s-dot" style="background:var(--accent-amber)"></span>
+    Mixed (Human + AI Assisted)
+  </button>
+  <button class="sample-btn" onclick="loadPreset('plagiarism')">
+    <span class="s-dot" style="background:var(--brand-violet)"></span>
+    Paraphrased Plagiarism Pair
+  </button>
+</div>

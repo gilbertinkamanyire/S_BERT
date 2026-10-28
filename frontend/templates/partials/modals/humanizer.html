@@ -1,0 +1,66 @@
+<div class="modal-backdrop" id="humanizerModal" onclick="if(event.target===this)closeModal('humanizerModal')">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span class="t-icon emerald">✨</span>
+        <span>AI Text Humanizer</span>
+      </div>
+      <button class="modal-close" onclick="closeModal('humanizerModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:0.84rem;color:var(--text-muted);margin-bottom:16px;line-height:1.6">
+        Removes common AI phrases and changes the wording and sentence rhythm so the text reads more like natural human writing.
+      </p>
+
+      <div class="humanizer-editor-grid">
+        <div>
+          <div style="font-size:0.75rem;font-weight:700;color:var(--text-dim);text-transform:uppercase;margin-bottom:6px">Input AI Text</div>
+          <textarea id="humanizerInput" class="humanizer-textarea" style="width:100%;background:var(--bg-input);border:1px solid var(--border-card);border-radius:10px;padding:14px;font-family:inherit;font-size:0.86rem;color:var(--text-main);resize:vertical;outline:none;line-height:1.65" placeholder="Paste robotic or AI text to humanize… Try: “It is important to note that artificial intelligence plays a pivotal role in modern society.”"></textarea>
+        </div>
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <span style="font-size:0.75rem;font-weight:700;color:var(--text-dim);text-transform:uppercase">Humanized Prose</span>
+            <span id="humScorePill" style="display:none;font-size:0.72rem;font-weight:800;padding:2px 10px;border-radius:9999px;background:rgba(5,150,105,.12);color:var(--accent-emerald);border:1px solid rgba(5,150,105,.3)"></span>
+          </div>
+          <textarea id="humanizerOutput" class="humanizer-textarea humanizer-output-textarea" style="width:100%;background:rgba(5,150,105,.03);border:1px solid rgba(5,150,105,.3);border-radius:10px;padding:14px;font-family:inherit;font-size:0.86rem;color:var(--text-main);resize:vertical;outline:none;line-height:1.65" placeholder="Your rewritten text will appear here… Veritext will compare the before-and-after AI probability and preserve your original meaning."></textarea>
+        </div>
+      </div>
+
+      <div id="humanizerImprovements" style="display:none;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:10px;padding:14px 18px;margin-bottom:18px;font-size:0.78rem">
+        <div style="font-weight:700;margin-bottom:6px;color:var(--accent-emerald);display:flex;align-items:center;gap:6px">
+          ✓ Stylometric Enhancements Applied:
+        </div>
+        <ul id="improvementsList" style="padding-left:18px;color:var(--text-muted);display:flex;flex-direction:column;gap:4px"></ul>
+      </div>
+
+      <div class="humanizer-action-grid">
+        <div class="humanizer-controls">
+          <label style="font-size:.75rem;color:var(--text-muted)" for="humanizeMode">Style</label>
+          <select id="humanizeMode" style="padding:9px;border-radius:8px;border:1px solid var(--border-card);background:var(--bg-input);color:var(--text-main)">
+            <option value="academic">Academic</option>
+            <option value="balanced" selected>Balanced</option>
+            <option value="casual">Conversational</option>
+          </select>
+          <label style="font-size:.75rem;color:var(--text-muted)" for="humanizeBackend">Engine</label>
+          <select id="humanizeBackend" style="padding:9px;border-radius:8px;border:1px solid var(--border-card);background:var(--bg-input);color:var(--text-main)">
+            <option value="local" selected>Local — private and offline</option>
+            <option value="gemma">Gemma API — optional</option>
+          </select>
+          <label style="font-size:.75rem;color:var(--text-muted)" for="humanizeIntensity">Intensity</label>
+          <select id="humanizeIntensity" style="padding:9px;border-radius:8px;border:1px solid var(--border-card);background:var(--bg-input);color:var(--text-main)">
+            <option value="1">Light</option>
+            <option value="2" selected>Balanced</option>
+            <option value="3">Strong</option>
+          </select>
+          <button class="btn-primary" id="btnRunHumanize" onclick="runHumanize()" style="padding:11px 26px">
+            ✨ Humanize Text Now
+          </button>
+        </div>
+        <div class="humanizer-result-actions">
+          <button class="btn-ghost" onclick="copyHumanizedText()">📋 Copy Result</button>
+          <button class="btn-ghost" onclick="applyHumanizedToDetector()" style="border-color:var(--brand-indigo);color:var(--brand-indigo)">🔍 Send to Detector</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

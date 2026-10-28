@@ -1,0 +1,36 @@
+<div class="modal-backdrop" id="uploadModal" onclick="if(event.target===this)closeModal('uploadModal')">
+  <div class="modal-box" style="max-width:620px">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span class="t-icon purple">📁</span>
+        <span>Document Ingest &amp; File Parser</span>
+      </div>
+      <button class="modal-close" onclick="closeModal('uploadModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:0.84rem;color:var(--text-muted);margin-bottom:16px;line-height:1.6">
+        Directly parse academic submissions, assignments, and research drafts. Supports <b>.PDF</b>, <b>.DOCX</b>, and <b>.TXT</b> up to 32MB.
+      </p>
+
+      <div id="dropZone" class="document-dropzone" role="button" tabindex="0" onclick="document.getElementById('hiddenFileInput').click()" onkeydown="if(event.key==='Enter'||event.key===' ') {event.preventDefault(); document.getElementById('hiddenFileInput').click();}">
+        <div class="document-dropzone-icon">📄</div>
+        <div class="document-dropzone-title">Choose a document</div>
+        <div class="document-dropzone-copy">or drag and drop it here</div>
+        <button type="button" class="btn-ghost document-browse-button">Browse files</button>
+        <div class="document-dropzone-formats">PDF, DOCX or TXT · Maximum 32 MB</div>
+        <input type="file" id="hiddenFileInput" hidden accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" onchange="handleModalUpload(event)">
+      </div>
+      <div id="uploadProgress" class="upload-progress" hidden><span class="spinner"></span><span>Reading and preparing document…</span></div>
+
+      <div id="uploadStatusBox" style="display:none;margin-top:16px;padding:14px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:10px">
+        <div style="font-size:0.84rem;font-weight:700;color:var(--text-main);margin-bottom:4px" id="uploadFileName">--</div>
+        <div style="font-size:0.75rem;color:var(--text-muted)" id="uploadFileMeta">--</div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
+        <button class="btn-ghost" onclick="closeModal('uploadModal')">Cancel</button>
+        <button class="btn-primary" id="btnUploadAnalyze" style="display:none" onclick="closeModal('uploadModal'); runDetect();">Analyze Document Now 🔍</button>
+      </div>
+    </div>
+  </div>
+</div>

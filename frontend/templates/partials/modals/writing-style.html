@@ -1,0 +1,54 @@
+<div class="modal-backdrop" id="stylometricsModal" onclick="if(event.target===this)closeModal('stylometricsModal')">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span class="t-icon cyan">📊</span>
+        <span>Writing Rhythm and Style Inspector</span>
+      </div>
+      <button class="modal-close" onclick="closeModal('stylometricsModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:0.84rem;color:var(--text-muted);margin-bottom:18px;line-height:1.6">
+        Checks how sentence lengths change throughout the text. Natural writing often mixes short and long sentences, while some machine-written text keeps a more even rhythm.
+      </p>
+
+      <div class="mini-metrics" style="grid-template-columns:repeat(4, 1fr);margin-bottom:20px">
+        <div class="mini-tile">
+          <div class="mini-tile-lbl">Writing Rhythm</div>
+          <div class="mini-tile-val" id="sm-burst" style="color:var(--accent-emerald)">--</div>
+          <div class="mini-tile-hint">Higher values mean more change</div>
+        </div>
+        <div class="mini-tile">
+          <div class="mini-tile-lbl">Average Word Surprise</div>
+          <div class="mini-tile-val" id="sm-ppl" style="color:var(--accent-cyan)">--</div>
+          <div class="mini-tile-hint">How expected the words are</div>
+        </div>
+        <div class="mini-tile">
+          <div class="mini-tile-lbl">Word Variety</div>
+          <div class="mini-tile-val" id="sm-ttr" style="color:var(--brand-violet)">--</div>
+          <div class="mini-tile-hint">How often different words are used</div>
+        </div>
+        <div class="mini-tile">
+          <div class="mini-tile-lbl">Repeated Words</div>
+          <div class="mini-tile-val" id="sm-yule" style="color:var(--accent-amber)">--</div>
+          <div class="mini-tile-hint">Vocabulary Richness</div>
+        </div>
+      </div>
+
+      <!-- Sentence Length Rhythm Graph -->
+      <div style="background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:12px;padding:16px;margin-bottom:18px">
+        <div style="font-size:0.75rem;font-weight:700;color:var(--text-dim);text-transform:uppercase;margin-bottom:10px;display:flex;justify-content:space-between">
+          <span>Sentence Length Changes (Words Per Sentence)</span>
+          <span id="sm-cadence-desc" style="color:var(--text-muted)"></span>
+        </div>
+        <div id="sm-cadence-bars" style="display:flex;align-items:flex-end;gap:6px;height:120px;padding:8px 0;border-bottom:1px solid var(--border-subtle)">
+          <div style="color:var(--text-dim);font-size:0.76rem;margin:auto">Run detection or paste text to visualize sentence rhythm curve.</div>
+        </div>
+      </div>
+
+      <div style="text-align:right">
+        <button class="btn-primary" onclick="closeModal('stylometricsModal'); runDetect();">Run Full Analysis</button>
+      </div>
+    </div>
+  </div>
+</div>

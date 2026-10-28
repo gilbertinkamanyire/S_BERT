@@ -1,0 +1,117 @@
+<!-- ═══════════════════════════════════════════════════════════════
+     HEADER / NAVBAR
+════════════════════════════════════════════════════════════════ -->
+<nav>
+  <div class="wrap nav-inner">
+    <a class="logo" href="#detector" onclick="selectTool('detector'); return false;">
+      <div class="logo-badge">🔬</div>
+      <span class="logo-name">Veritext</span>
+      <span class="logo-tag">Writing Check</span>
+    </a>
+
+    <div class="nav-links">
+      <!-- Tools Dropdown Menu -->
+      <div class="dropdown-container" id="toolsDropdownContainer">
+        <button class="nav-link" id="toolsMenuBtn" onclick="toggleToolsMenu(event)" style="font-weight:700;color:var(--text-main);">
+          <span>🛠️ Writing Tools</span>
+          <span style="font-size:10px;transition:transform .2s" id="toolsArrow">▼</span>
+        </button>
+
+        <!-- Dynamic Dropdown with Functional Hyperlinks -->
+        <div class="dropdown-menu" id="toolsMenu">
+          <div class="dropdown-section-title">
+            <span>Main Writing Tools</span>
+            <span class="badge-pill badge-pop">8 Tools</span>
+          </div>
+
+          <a href="#detector" class="tool-link" onclick="selectTool('detector'); return false;">
+            <div class="t-icon purple">🤖</div>
+            <div class="t-info">
+              <div class="t-header">AI Content Detector <span class="badge-pill badge-pop">POPULAR</span></div>
+              <div class="t-desc">Checks word choice, sentence rhythm, and repeated writing patterns</div>
+            </div>
+          </a>
+
+          <a href="#humanizer" class="tool-link" onclick="openHumanizerModal(); return false;">
+            <div class="t-icon emerald">✨</div>
+            <div class="t-info">
+              <div class="t-header">AI Text Humanizer <span class="badge-pill badge-new">SMART</span></div>
+              <div class="t-desc">Changes robotic AI wording into natural human writing</div>
+            </div>
+          </a>
+
+          <a href="#plagiarism" class="tool-link" onclick="selectTool('plagiarism'); return false;">
+            <div class="t-icon amber">📋</div>
+            <div class="t-info">
+              <div class="t-header">Copied or Rewritten Text</div>
+              <div class="t-desc">Finds similar or newly worded text in your supplied source</div>
+            </div>
+          </a>
+
+          <a href="#stylometrics" class="tool-link" onclick="openStylometricsModal(); return false;">
+            <div class="t-icon cyan">📊</div>
+            <div class="t-info">
+              <div class="t-header">Writing Rhythm &amp; Style</div>
+              <div class="t-desc">Checks sentence length changes, word variety, and writing patterns</div>
+            </div>
+          </a>
+
+          <a href="#buzzwords" class="tool-link" onclick="openBuzzwordsModal(); return false;">
+            <div class="t-icon rose">🏷️</div>
+            <div class="t-info">
+              <div class="t-header">AI Buzzword Hunter</div>
+              <div class="t-desc">Detects tell-tale LLM clichés ("delve", "multifaceted tapestry", "pivotal role")</div>
+            </div>
+          </a>
+
+          <div class="dropdown-section-title" style="margin-top:6px;border-top:1px solid var(--border-subtle);padding-top:8px">
+            <span>Data &amp; API Integration</span>
+          </div>
+
+          <a href="#upload" class="tool-link" onclick="openUploadModal(); return false;">
+            <div class="t-icon purple">📁</div>
+            <div class="t-info">
+              <div class="t-header">Document Ingest</div>
+              <div class="t-desc">Direct parser for .pdf, .docx, and .txt research files</div>
+            </div>
+          </a>
+
+          <a href="#audit" class="tool-link" onclick="openAuditModal(); return false;">
+            <div class="t-icon cyan">🔐</div>
+            <div class="t-info">
+              <div class="t-header">SHA-256 Audit Seal</div>
+              <div class="t-desc">Cryptographic tamper-evident fingerprinting &amp; verification</div>
+            </div>
+          </a>
+
+          <a href="#api" class="tool-link" onclick="openApiModal(); return false;">
+            <div class="t-icon emerald">💻</div>
+            <div class="t-info">
+              <div class="t-header">Developer REST API</div>
+              <div class="t-desc">Local JSON endpoints for programmatic integration (Port 5050)</div>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <!-- Direct Nav Bar Hyperlinks -->
+      <a class="nav-link active" id="nav-detector" href="#detector" onclick="selectTool('detector'); return false;">AI Detector</a>
+      <a class="nav-link" id="nav-humanizer" href="#humanizer" onclick="openHumanizerModal(); return false;">✨ Humanizer</a>
+      <a class="nav-link" id="nav-plagiarism" href="#plagiarism" onclick="selectTool('plagiarism'); return false;">Plagiarism</a>
+      <a class="nav-link" id="nav-stylometrics" href="#stylometrics" onclick="openStylometricsModal(); return false;">Writing Style</a>
+      <a class="nav-link" id="nav-benchmarks" href="#benchmarks" onclick="openBenchmarkModal(); return false;">🎓 Benchmarks</a>
+      <a class="nav-link" href="#history" onclick="openHistoryModal(); return false;">🕘 History</a>
+      <a class="nav-link" id="nav-api" href="#api" onclick="openApiModal(); return false;">API</a>
+    </div>
+
+    <div class="nav-ctas">
+      <button class="btn-theme-toggle" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Light / Dark Mode">
+        <span id="themeToggleIcon">☀️</span> <span id="themeToggleText">Light</span>
+      </button>
+      {% if user_name %}<span class="account-user">{{ user_name }}</span>{% endif %}
+      <a href="#api" class="btn-ghost" onclick="openApiModal(); return false;">API Docs</a>
+      <a href="#humanizer" class="btn-primary" onclick="openHumanizerModal(); return false;">Try Humanizer ✨</a>
+      <a href="{{ url_for('auth_logout') }}" class="btn-ghost auth-signout" title="Sign out">Sign out</a>
+    </div>
+  </div>
+</nav>

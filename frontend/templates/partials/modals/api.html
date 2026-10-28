@@ -1,0 +1,39 @@
+<div class="modal-backdrop" id="apiModal" onclick="if(event.target===this)closeModal('apiModal')">
+  <div class="modal-box" style="max-width:760px">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span class="t-icon emerald">💻</span>
+        <span>Veritext Developer REST API &amp; Test Console</span>
+      </div>
+      <button class="modal-close" onclick="closeModal('apiModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:0.84rem;color:var(--text-muted);margin-bottom:14px;line-height:1.6">
+        Local REST endpoints running on <code style="color:var(--brand-indigo);font-family:'JetBrains Mono'">http://127.0.0.1:5050</code>. Zero external API keys needed.
+      </p>
+
+      <div style="font-size:0.75rem;font-weight:700;color:var(--text-dim);text-transform:uppercase;margin:12px 0 6px">1. Full AI Detection Service</div>
+      <pre style="background:#0F172A;border:1px solid #1E293B;border-radius:10px;padding:14px;font-size:0.74rem;color:#38BDF8;font-family:'JetBrains Mono',monospace;overflow-x:auto;line-height:1.5"><code>curl -X POST http://127.0.0.1:5050/api/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"text_a": "Essay excerpt to verify...", "text_b": "Optional source reference...", "threshold": 0.70}'</code></pre>
+
+      <div style="font-size:0.75rem;font-weight:700;color:var(--text-dim);text-transform:uppercase;margin:16px 0 6px">2. AI Text Humanizer Endpoint</div>
+      <pre style="background:#0F172A;border:1px solid #1E293B;border-radius:10px;padding:14px;font-size:0.74rem;color:#38BDF8;font-family:'JetBrains Mono',monospace;overflow-x:auto;line-height:1.5"><code>curl -X POST http://127.0.0.1:5050/api/humanize \
+  -H "Content-Type: application/json" \
+  -d '{"text": "Robotic text with AI buzzwords to restructure..."}'</code></pre>
+
+      <!-- Live API Console Tester -->
+      <div style="margin-top:20px;padding:16px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <span style="font-size:0.78rem;font-weight:700;color:var(--text-main)">Interactive Server Ping &amp; Live Test</span>
+          <button class="btn-ghost" id="btnTestApi" onclick="testLiveApi()" style="padding:5px 12px;font-size:0.74rem">⚡ Test /api/health</button>
+        </div>
+        <pre id="apiTestConsole" style="background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:8px;padding:12px;font-size:0.74rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;max-height:120px;overflow-y:auto">Click 'Test /api/health' to verify live backend response...</pre>
+      </div>
+
+      <div style="text-align:right;margin-top:20px">
+        <button class="btn-ghost" onclick="closeModal('apiModal')">Close Console</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,15 @@
+<div class="modal-backdrop" id="historyModal" onclick="if(event.target===this)closeModal('historyModal')">
+  <div class="modal-box" style="max-width:760px">
+    <div class="modal-header">
+      <div class="modal-title"><span class="t-icon purple">🕘</span><span>My Recent History</span></div>
+      <button class="modal-close" onclick="closeModal('historyModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.84rem;color:var(--text-muted);line-height:1.6;margin-bottom:14px">Saved only on this browser. It can help you return to earlier checks and rewritten text.</p>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+        <button class="btn-ghost" onclick="clearAppHistory()">Clear History</button>
+      </div>
+      <div id="historyList" style="display:flex;flex-direction:column;gap:10px;max-height:430px;overflow:auto"></div>
+    </div>
+  </div>
+</div>

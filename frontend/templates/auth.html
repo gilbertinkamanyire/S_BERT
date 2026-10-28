@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Veritext — Account</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}?v=20261028b">
+</head>
+<body class="auth-page">
+  <header class="auth-appbar" aria-label="Veritext application header">
+    <a class="auth-app-logo" href="{{ url_for('account_page') }}" aria-label="Veritext home">
+      <span class="auth-brand-mark">V</span>
+      <span><strong>Veritext</strong><small>Writing &amp; source intelligence</small></span>
+    </a>
+    <span class="auth-private-badge">Protected workspace</span>
+  </header>
+  <main class="auth-shell">
+    <section class="auth-brand-panel">
+      <div class="auth-brand-mark">V</div>
+      <div>
+        <h1>Veritext</h1>
+        <p>Private AI writing and source review.</p>
+      </div>
+      <div class="auth-visual" aria-hidden="true">
+        <div class="auth-orbit"></div>
+        <div class="auth-orb">
+          <svg viewBox="0 0 100 100" role="presentation">
+            <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="2" stroke-dasharray="4 7"/>
+            <path d="M92 50 A42 42 0 0 1 50 92" fill="none" stroke="#49dcb1" stroke-width="5" stroke-linecap="round"/>
+            <circle cx="50" cy="50" r="6" fill="#fff"/>
+            <circle cx="50" cy="50" r="13" fill="none" stroke="rgba(255,255,255,.35)"/>
+          </svg>
+        </div>
+      </div>
+      <div class="auth-feature-list">
+        <span>✓ Runs locally on this computer</span>
+        <span>✓ Your account and documents stay private</span>
+        <span>✓ Secure password recovery questions</span>
+      </div>
+    </section>
+
+    <section class="auth-card" aria-live="polite">
+      <div class="auth-tabs" role="tablist">
+        <button class="auth-tab active" data-view="login">Sign in</button>
+        <button class="auth-tab" data-view="signup">Create account</button>
+      </div>
+
+      <form id="loginForm" class="auth-view" method="post" action="{{ url_for('auth_login') }}">
+        <h2>Welcome back</h2>
+        <p class="auth-intro">Sign in to access your Veritext workspace.</p>
+        <label>Email<input name="email" type="email" autocomplete="email" required></label>
+        <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
+        <div class="auth-message error">{{ error if mode == 'login' else '' }}</div>
+        <button class="btn-primary auth-submit" type="submit">Sign in</button>
+        <button type="button" class="auth-link" data-view="reset">Forgot password?</button>
+      </form>
+
+      <form id="signupForm" class="auth-view" method="post" action="{{ url_for('auth_signup') }}" hidden>
+        <h2>Create your account</h2>
+        <p class="auth-intro">Create an account before using Veritext.</p>
+        <label>Full name<input name="name" autocomplete="name" required></label>
+        <label>Email<input name="email" type="email" autocomplete="email" required></label>
+        <label>Password<input name="password" type="password" minlength="8" autocomplete="new-password" required></label>
+        <label>Confirm password<input name="confirm_password" type="password" minlength="8" autocomplete="new-password" required></label>
+        <div class="security-section">
+          <strong>Password recovery questions</strong>
+          {% for i in range(1, 4) %}
+          <label>{{ ['Security question 1', 'Security question 2', 'Security question 3'][i-1] }}
+            <select name="question_{{ i }}" required>
+              <option value="">Choose a question</option>
+              <option>What was the name of your first school?</option>
+              <option>What is your favourite childhood book?</option>
+              <option>In which city did you meet your closest friend?</option>
+              <option>What was the name of your first teacher?</option>
+            </select>
+          </label>
+          <label>Your answer<input name="answer_{{ i }}" autocomplete="off" required></label>
+          {% endfor %}
+        </div>
+        <div class="auth-message error">{{ error if mode == 'signup' else '' }}</div>
+        <button class="btn-primary auth-submit" type="submit">Create account</button>
+      </form>
+
+      <form id="resetForm" class="auth-view" method="post" action="{{ url_for('auth_reset') }}" hidden>
+        <h2>Reset password</h2>
+        <p class="auth-intro">Verify your account with the security answers you saved.</p>
+        <label>Email<input id="resetEmail" name="email" type="email" autocomplete="email" required></label>
+        <label><span class="recovery-question">First security question</span><input name="answer_1" autocomplete="off" required></label>
+        <label><span class="recovery-question">Second security question</span><input name="answer_2" autocomplete="off" required></label>
+        <label><span class="recovery-question">Third security question</span><input name="answer_3" autocomplete="off" required></label>
+        <label>New password<input name="password" type="password" minlength="8" autocomplete="new-password" required></label>
+        <div class="auth-message error">{{ error if mode == 'reset' else '' }}</div>
+        <button class="btn-primary auth-submit" type="submit">Reset password</button>
+        <button type="button" class="auth-link" data-view="login">Back to sign in</button>
+      </form>
+    </section>
+  </main>
+  <footer class="auth-app-footer">Secure account access for the Veritext workspace</footer>
+<script>
+  const views = { login: document.getElementById('loginForm'), signup: document.getElementById('signupForm'), reset: document.getElementById('resetForm') };
+  function showView(name) {
+    Object.entries(views).forEach(([key, form]) => form.hidden = key !== name);
+    document.querySelectorAll('.auth-tab').forEach(tab => tab.classList.toggle('active', tab.dataset.view === name));
+    document.querySelector('.auth-tabs').hidden = name === 'reset';
+  }
+  document.querySelectorAll('[data-view]').forEach(control => control.addEventListener('click', () => showView(control.dataset.view)));
+  document.querySelectorAll('.security-section select').forEach((select) => select.addEventListener('change', () => {
+    const selected = new Set([...document.querySelectorAll('.security-section select')].map(item => item.value).filter(Boolean));
+    document.querySelectorAll('.security-section select').forEach((other) => [...other.options].forEach(option => {
+      if (option.value) option.disabled = option.value !== other.value && selected.has(option.value);
+    }));
+  }));
+  const resetEmail = document.getElementById('resetEmail');
+  resetEmail.addEventListener('change', async () => {
+    const response = await fetch('{{ url_for("auth_recovery_questions") }}', {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ email: resetEmail.value })
+    });
+    const data = await response.json();
+    document.querySelectorAll('.recovery-question').forEach((label, index) => {
+      label.textContent = data.success && data.questions[index] ? data.questions[index] : `${['First', 'Second', 'Third'][index]} security question`;
+    });
+  });
+  showView({{ mode|tojson if mode else '"login"' }});
+</script>
+</body>
+</html>

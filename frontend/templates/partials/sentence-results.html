@@ -1,0 +1,44 @@
+<!-- ═══════════════════════════════════════════════════════════════
+     SENTENCE-LEVEL FORENSIC HEATMAP (Phase 4 Specification)
+════════════════════════════════════════════════════════════════ -->
+<section id="heatmap-section" class="wrap">
+  <div class="heatmap-card">
+    <div class="heatmap-top">
+      <div class="heatmap-title-group">
+        <span class="p-icon purple">🗂️</span>
+        <div>
+          <div class="heatmap-title">Sentence-by-Sentence Results</div>
+          <div class="heatmap-sub">Shows copied or rewritten text, AI writing, and human writing in each sentence</div>
+        </div>
+      </div>
+
+      <div class="filter-row">
+        <button class="chip active" onclick="filterSents('all', this)">All Sentences</button>
+        <button class="chip" onclick="filterSents('high', this)">🔴 High Match (≥85%)</button>
+        <button class="chip" onclick="filterSents('paraphrase', this)">🟡 Paraphrase (70-84%)</button>
+        <button class="chip" onclick="filterSents('ai', this)">🟣 AI-Generated</button>
+        <button class="chip" onclick="filterSents('clean', this)">🟢 Original Human</button>
+      </div>
+    </div>
+
+    <!-- Dynamic Threshold Slider -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:14px 24px;border-bottom:1px solid var(--border-subtle);background:rgba(15,23,42,.015)">
+      <div style="display:flex;align-items:center;gap:12px;font-size:0.8rem">
+        <span style="font-weight:700;color:var(--text-main)">📐 Paraphrase Threshold (&tau; &ge; 0.70):</span>
+        <input type="range" id="threshSlider" min="50" max="95" value="70" step="1" oninput="updateThreshold(this.value)" style="accent-color:var(--brand-indigo);cursor:pointer;width:160px">
+        <span id="threshVal" style="font-weight:800;color:var(--accent-cyan);min-width:40px;font-family:'JetBrains Mono',monospace">70%</span>
+      </div>
+      <div style="font-size:0.72rem;color:var(--text-dim)">How closely a sentence must match the source text</div>
+    </div>
+
+    <!-- Phase 4 Color-Coded Heatmap Legend -->
+    <div class="legend-row">
+      <div class="legend-item"><div class="legend-bar" style="background:#EF4444;border-left:3px solid #B91C1C"></div><strong>Red:</strong> High Match (&ge;85%)</div>
+      <div class="legend-item"><div class="legend-bar" style="background:#F59E0B;border-left:3px solid #D97706"></div><strong>Yellow:</strong> Moderate Paraphrase (70%–84%)</div>
+      <div class="legend-item"><div class="legend-bar" style="background:#8B5CF6;border-left:3px solid #6366F1"></div><strong>Purple:</strong> Likely AI-written</div>
+      <div class="legend-item"><div class="legend-bar" style="background:#10B981;border-left:3px solid #059669"></div><strong>Green:</strong> Original Human Text</div>
+    </div>
+
+    <div class="sent-list" id="sentList"></div>
+  </div>
+</section>

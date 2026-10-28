@@ -1,0 +1,41 @@
+<div class="modal-backdrop" id="auditModal" onclick="if(event.target===this)closeModal('auditModal')">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span class="t-icon cyan">🔐</span>
+        <span>SHA-256 Cryptographic Audit Seal</span>
+      </div>
+      <button class="modal-close" onclick="closeModal('auditModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:0.84rem;color:var(--text-muted);margin-bottom:16px;line-height:1.6">
+        Provides tamper-evident cryptographic provenance for academic forensic reports. Hashes are computed locally and are immutable.
+      </p>
+
+      <div style="display:flex;flex-direction:column;gap:12px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:12px;padding:18px;font-family:'JetBrains Mono',monospace;font-size:0.76rem;margin-bottom:18px">
+        <div>
+          <span style="color:var(--text-dim);font-weight:700">PRIMARY TEXT SHA-256:</span><br>
+          <span id="audit-sha-a" style="color:var(--accent-sky);word-break:break-all">--</span>
+        </div>
+        <div>
+          <span style="color:var(--text-dim);font-weight:700">REFERENCE CORPUS SHA-256:</span><br>
+          <span id="audit-sha-b" style="color:var(--accent-amber);word-break:break-all">None Provided</span>
+        </div>
+        <div>
+          <span style="color:var(--text-dim);font-weight:700">SIGNED AUDIT SEAL:</span><br>
+          <span id="audit-seal-val" style="color:var(--accent-emerald);word-break:break-all">--</span>
+        </div>
+        <div>
+          <span style="color:var(--text-dim);font-weight:700">SCAN TIMESTAMP:</span><br>
+          <span id="audit-time-val" style="color:var(--text-main)">--</span>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:0.75rem;color:var(--accent-emerald);font-weight:700">✓ Cryptographic Integrity Verified</span>
+        <button class="btn-ghost" onclick="copyAuditReport()">📋 Copy Certificate</button>
+          <button class="btn-primary" onclick="downloadPdfDossier()" style="background:#0284C7;border-color:#0284C7">📥 Download PDF Dossier</button>
+      </div>
+    </div>
+  </div>
+</div>

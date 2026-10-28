@@ -1,0 +1,65 @@
+<!-- ═══════════════════════════════════════════════════════════════
+     WORKSPACE: SPLIT PANEL WORKSPACE
+════════════════════════════════════════════════════════════════ -->
+<main class="workspace wrap">
+  <!-- LEFT PANEL: Text Submission & Reference Input -->
+  <div class="panel-left">
+    <div class="panel-header">
+      <div class="panel-title">
+        <span class="p-icon purple">📝</span>
+        <span>Document Input</span>
+      </div>
+      <div class="panel-actions">
+        <button class="action-btn" onclick="pasteClipboard()">📋 Paste</button>
+        <button class="action-btn" onclick="clearAll()">✕ Clear</button>
+        <button class="file-btn" onclick="openUploadModal()">📁 Upload Document</button>
+        <button class="action-btn" id="refToggleBtn" onclick="toggleRef()" style="color:var(--accent-amber);border-color:rgba(217,119,6,.3)">
+          <span id="refToggleIcon">▶</span> Reference Corpus
+        </button>
+      </div>
+    </div>
+
+    <!-- Primary Textarea -->
+    <textarea id="mainInput" placeholder="Paste or type academic essay, thesis excerpt, or document text to examine for synthetic generation and semantic overlap..."></textarea>
+
+    <!-- Reference text used for copied or rewritten text matching -->
+    <div id="refBox">
+      <div class="ref-header">
+        <span class="ref-title">
+          <span>📋 Reference Document B (Ground-Truth Source Corpus)</span>
+        </span>
+        <span style="font-size:0.74rem;color:var(--text-dim)">Copied or Rewritten Text Comparison</span>
+      </div>
+      <textarea id="refInput" placeholder="Optional manual source text (leave empty when using cited sources below)..."></textarea>
+      <div class="citation-source-box">
+        <label for="sourceCitations"><strong>Cited sources</strong> — enter one URL, DOI, or citation per line</label>
+        <textarea id="sourceCitations" rows="4" placeholder="https://doi.org/10.1000/example&#10;Author, A. (2024). The source title. Journal Name.&#10;https://publisher.example.org/article"></textarea>
+        <button type="button" class="action-btn source-check-btn" onclick="checkCitedSources()">Check cited sources</button>
+        <div id="sourceCheckStatus" class="source-check-status" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <div class="panel-footer">
+      <div class="word-counter">
+        <span>Words: <b id="wCount">0</b></span>
+        <span>Sentences: <b id="sCount">0</b></span>
+        <span id="toolStateIndicator" style="color:var(--brand-indigo);font-weight:700">● AI Check Active</span>
+      </div>
+      <button class="btn-detect" id="detectBtn" onclick="runDetect()">
+        <span id="detectIcon">🔍</span>
+        <span id="detectTxt">Detect AI &amp; Plagiarism</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL: Gauge & Forensics Score Card -->
+  <div class="panel-right" id="rightPanel">
+    <div class="score-card">
+      <div class="empty-rp" id="emptyState">
+        <div class="empty-rp-icon">🧪</div>
+        <div class="empty-rp-title">Writing Check Ready</div>
+        <div class="empty-rp-desc">Paste your text on the left or select a benchmark preset above, then click <strong>Detect AI &amp; Plagiarism</strong>.</div>
+      </div>
+    </div>
+  </div>
+</main>

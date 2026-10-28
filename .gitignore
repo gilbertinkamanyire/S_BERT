@@ -1,0 +1,24 @@
+.env
+__pycache__/
+*.pyc
+venv/
+.venv/
+uploads/
+
+# Application output
+data/uploads/
+*.log
+dist/
+build/
+*.egg-info/
+.venv314/
+.venv*/
+
+# Local/private runtime data
+data/
+data/uploads/
+*.sqlite3
+*.sqlite
+*.log
+.session_secret
+

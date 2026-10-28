@@ -1,0 +1,40 @@
+<footer class="app-footer wrap">
+  <div class="app-footer-brand">
+    <div class="logo-badge app-footer-badge" aria-hidden="true">🔬</div>
+    <div>
+      <strong>Veritext</strong>
+      <span>Private AI writing and source review</span>
+    </div>
+  </div>
+
+  <div class="app-footer-features">
+    <span>🔒 Runs locally</span>
+    <span>📐 Meaning-based matching</span>
+    <span>⚡ Writing rhythm analysis</span>
+    <span>🕘 Saved history</span>
+  </div>
+</footer>
+
+<style>
+.app-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 28px;
+  margin-bottom: 28px;
+  padding-top: 18px;
+  padding-bottom: 18px;
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+}
+.app-footer-brand { display: flex; align-items: center; gap: 10px; }
+.app-footer-badge { width: 34px !important; height: 34px !important; flex: 0 0 34px; }
+.app-footer-brand strong { display: block; color: var(--text-main); }
+.app-footer-brand span { font-size: 0.76rem; }
+.app-footer-features { display: flex; align-items: center; justify-content: flex-end; gap: 14px; flex-wrap: wrap; font-size: 0.76rem; }
+@media (max-width: 720px) {
+  .app-footer { align-items: flex-start; flex-direction: column; }
+  .app-footer-features { justify-content: flex-start; }
+}
+</style>
