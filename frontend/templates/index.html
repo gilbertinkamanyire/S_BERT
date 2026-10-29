@@ -904,6 +904,9 @@ async function uploadDocument(file) {
     }, 300);
     toast(`✓ ${file.name} imported successfully`);
   } catch(err) {
+    document.getElementById('uploadStatusBox').style.display = 'block';
+    document.getElementById('uploadFileName').textContent = 'Upload failed';
+    document.getElementById('uploadFileMeta').textContent = err.message || 'Ensure the server is active and try again.';
     toast(err.message || 'Upload failed — ensure the server is active');
   } finally {
     progress.hidden = true;

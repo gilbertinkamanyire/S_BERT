@@ -366,8 +366,12 @@ def api_upload():
             'sentence_count': len(sentences),
             'text': text
         })
+    except ImportError as e:
+        app.logger.error('Document parser dependency missing: %s', e)
+        return jsonify({'success': False, 'error': 'The document parser is not installed. Restart Veritext and try again.'}), 500
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.exception('Document upload failed for %s', filename)
+        return jsonify({'success': False, 'error': 'Could not read this document. Confirm that it is not password-protected or damaged.'}), 400
 
 
 @app.route('/api/citations/check', methods=['POST'])
