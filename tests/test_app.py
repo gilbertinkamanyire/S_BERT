@@ -129,6 +129,25 @@ Doe, R. (2021). https://doi.org/10.1234/example"""
         self.assertTrue(data['success'])
         self.assertGreaterEqual(len(data['sources']), 2)
 
+    def test_document_upload_api(self):
+        from io import BytesIO
+        res = self.app.post('/api/upload', data={
+            'file': (BytesIO(b'Veritext uploaded document. This is a readable test paragraph.'), 'document.txt')
+        }, content_type='multipart/form-data')
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['filename'], 'document.txt')
+        self.assertIn('uploaded document', data['text'])
+
+    def test_unsupported_document_upload_api(self):
+        from io import BytesIO
+        res = self.app.post('/api/upload', data={
+            'file': (BytesIO(b'not supported'), 'document.exe')
+        }, content_type='multipart/form-data')
+        self.assertEqual(res.status_code, 400)
+        self.assertFalse(res.get_json()['success'])
+
     def test_citation_reference_audit_author_year(self):
         text = """This result is supported by Smith (2020) and multiple studies (Jones, 2019; Brown & Lee, 2021).
 References

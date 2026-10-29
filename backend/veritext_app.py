@@ -343,9 +343,15 @@ def api_upload():
     if file.filename == '':
         return jsonify({'error': 'No file selected'}), 400
 
-    filename = file.filename
+    filename = file.filename.strip()
+    extension = filename.lower().rsplit('.', 1)[-1] if '.' in filename else ''
+    if extension not in {'pdf', 'docx', 'txt', 'md'}:
+        return jsonify({'success': False, 'error': 'Unsupported file type. Upload a PDF, DOCX, TXT, or MD document.'}), 400
+
     try:
         file_bytes = file.read()
+        if not file_bytes:
+            return jsonify({'success': False, 'error': 'The uploaded file is empty.'}), 400
         text = ingest.extract_text_from_file(file_bytes, filename).strip()
         if not text:
             return jsonify({'success': False, 'error': 'This file does not contain readable text.'}), 400

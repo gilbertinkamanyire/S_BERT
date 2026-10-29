@@ -897,7 +897,12 @@ async function uploadDocument(file) {
     document.getElementById('uploadFileMeta').textContent = `Parsed ${d.word_count} words across ${d.sentence_count} sentences.`;
     document.getElementById('btnUploadAnalyze').style.display = 'inline-flex';
     saveToAppHistory('upload', { filename: d.filename, words: d.word_count });
-    toast(`✓ ${file.name} is ready to analyze`);
+    clearTimeout(automaticAuditTimer);
+    automaticAuditTimer = setTimeout(() => {
+      checkCitationReferences();
+      checkCitedSources();
+    }, 300);
+    toast(`✓ ${file.name} imported successfully`);
   } catch(err) {
     toast(err.message || 'Upload failed — ensure the server is active');
   } finally {
