@@ -293,6 +293,37 @@ async function checkCitedSources() {
   }
 }
 
+async function checkCitationReferences() {
+  const status = document.getElementById('citationAuditStatus');
+  const text = document.getElementById('mainInput').value.trim();
+  if(!text) {
+    status.innerHTML = '<span class="source-state source-missing">Enter document text to audit citations.</span>';
+    return null;
+  }
+  status.innerHTML = '<span class="source-state source-checking">Checking citations against references…</span>';
+  try {
+    const res = await fetch('/api/citations/check', {
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ text })
+    });
+    const data = await res.json();
+    if(!res.ok || !data.success) throw new Error(data.error || 'Citation audit failed');
+    if(data.pass) {
+      status.innerHTML = `<div class="source-state source-found"><strong>Reference audit passed</strong><br>All ${data.citation_count} citations match the ${data.reference_count} reference entries.</div>`;
+      return data;
+    }
+    const uncited = data.uncited_references.map(ref => `<li>${escapeHtml(ref.text)}</li>`).join('');
+    const unmatched = data.unreferenced_citations.map(citation => `<li>${escapeHtml(citation.label || '[' + citation.key + ']')}</li>`).join('');
+    status.innerHTML = `<div class="source-state source-missing"><strong>References need attention</strong>`
+      + (uncited ? `<br><b>References not cited (${data.uncited_references.length})</b><ul>${uncited}</ul>` : '')
+      + (unmatched ? `<b>Citations without references (${data.unreferenced_citations.length})</b><ul>${unmatched}</ul>` : '')
+      + `</div>`;
+    return data;
+  } catch(err) {
+    status.innerHTML = `<span class="source-state source-missing">${escapeHtml(err.message)}</span>`;
+    return null;
+  }
+}
+
 async function runDetect() {
   const text = document.getElementById('mainInput').value.trim();
   if(!text) {
@@ -311,6 +342,7 @@ async function runDetect() {
   const sources = document.getElementById('sourceCitations').value.split(/\n/).map(item => item.trim()).filter(Boolean);
 
   try {
+    await checkCitationReferences();
     const res = await fetch('/api/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

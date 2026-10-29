@@ -119,6 +119,40 @@ class VeritasFlaskTestCase(unittest.TestCase):
         self.assertEqual(data['options']['intensity'], 3)
         print('[PASS] POST /api/humanize: Produced local rewritten prose')
 
+    def test_citation_reference_audit_author_year(self):
+        text = """This result is supported by Smith (2020) and multiple studies (Jones, 2019; Brown & Lee, 2021).
+References
+Smith, J. (2020). A useful study. Journal, 1, 1-10.
+Jones, M. (2019). Another study. Journal, 2, 10-20.
+Brown, P., & Lee, K. (2021). A third study. Journal, 3, 20-30."""
+        res = self.app.post('/api/citations/check', json={'text': text})
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertTrue(data['success'])
+        self.assertTrue(data['pass'], data)
+
+    def test_citation_reference_audit_flags_both_directions(self):
+        text = """The claim is supported by Smith (2020), but Garcia (2023) is absent from the list.
+References
+Smith, J. (2020). A useful study. Journal, 1, 1-10.
+Jones, M. (2019). Uncited study. Journal, 2, 10-20."""
+        res = self.app.post('/api/citations/check', json={'text': text})
+        data = res.get_json()
+        self.assertFalse(data['pass'])
+        uncited_text = ' '.join(ref['text'] for ref in data['uncited_references'])
+        unmatched_labels = ' '.join(citation['label'] for citation in data['unreferenced_citations'])
+        self.assertIn('Jones, M.', uncited_text)
+        self.assertIn('Garcia', unmatched_labels)
+
+    def test_citation_reference_audit_numbered(self):
+        text = """Several mechanisms are described [1-2].
+References
+[1] Smith, J. (2020). First source.
+[2] Jones, M. (2019). Second source."""
+        res = self.app.post('/api/citations/check', json={'text': text})
+        data = res.get_json()
+        self.assertTrue(data['pass'], data)
+
     def test_gemma_humanizer_api(self):
         payload = {
             'text': "It is important to note that this technology plays a pivotal role in modern education. It is crucial to consider its impact.",

@@ -364,6 +364,166 @@ def api_upload():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/citations/check', methods=['POST'])
+def api_check_citations():
+    body = request.get_json(silent=True) or {}
+    text = str(body.get('text', '')).strip()
+    if not text:
+        return jsonify({'success': False, 'error': 'Please provide the document text.'}), 400
+
+    lines = text.splitlines()
+    reference_heading = None
+    for index, line in enumerate(lines):
+        heading = re.sub(r'[^a-z\s]', '', line.lower()).strip()
+        if heading in {'references', 'reference', 'bibliography', 'works cited', 'list of references'}:
+            reference_heading = index
+            break
+
+    reference_text = '\n'.join(lines[reference_heading + 1:]) if reference_heading is not None else ''
+    body_text = '\n'.join(lines[:reference_heading]) if reference_heading is not None else text
+    raw_references = []
+    if reference_text:
+        lines_for_refs = [line.strip() for line in reference_text.splitlines() if line.strip()]
+        current = ''
+        for line in lines_for_refs:
+            if re.match(r'^\s*(\[\d+\]|\d+[.)]\s+)', line) or (current and re.match(r'^\s*[A-Z][A-Za-z\-\']+[,\s]+(?:[A-Z]\.|[A-Z][A-Za-z]+)', line) and re.search(r'\b(?:19|20)\d{2}\b', line)):
+                if current:
+                    raw_references.append(current.strip())
+                current = re.sub(r'^\s*(?:\[\d+\]|\d+[.)]\s+)', '', line)
+            else:
+                current = (current + ' ' + line).strip() if current else line
+        if current:
+            raw_references.append(current.strip())
+
+    references = []
+    reference_by_key = {}
+    for index, entry in enumerate(raw_references, 1):
+        years = re.findall(r'\b(?:19|20)\d{2}[a-z]?\b', entry)
+        year = years[-1] if years else ''
+        numeric_match = re.match(r'^\[?(\d+)\]?\s*', entry)
+        numeric_key = numeric_match.group(1) if numeric_match else str(index)
+        authors = []
+        author_part = entry.split('.', 1)[0]
+        before_year = entry.split('(' + year + ')', 1)[0] if year and '(' + year + ')' in entry else entry.split(year, 1)[0]
+        candidate = before_year.split('.')[0].strip(' ,;')
+        for value in re.split(r'\s+(?:and|&)\s+|;\s*|,\s*(?=[A-Z][A-Za-z\-]+,)', candidate):
+            value = value.strip(' ,;.&')
+            if re.search(r'https?://|doi:', value, re.I):
+                continue
+            tokens = re.findall(r"[A-Z][A-Za-zÀ-ÖØ-öø-ÿ'’-]+", value)
+            if tokens:
+                surname = tokens[0] if ',' in value else tokens[-1]
+                surname = re.sub(r'[^A-Za-zÀ-ÖØ-öø-ÿ\'’-]', '', surname)
+                if len(surname) >= 2 and surname.lower() not in {'the', 'and'}:
+                    authors.append(surname.lower())
+        if not authors:
+            first_tokens = re.findall(r"[A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ'’-]+", candidate)
+            if first_tokens:
+                authors = [first_tokens[0].lower()]
+        ref = {'number': index, 'numeric_key': numeric_key, 'text': entry, 'year': year, 'authors': authors}
+        references.append(ref)
+        for author in authors:
+            reference_by_key[(author, year.lower())] = ref
+
+    citations = []
+    citation_pattern = re.compile(r'\([^()]*?(?:19|20)\d{2}[a-z]?[^()]*\)')
+    for match in citation_pattern.finditer(body_text):
+        content = match.group(0)[1:-1]
+        year_matches = list(re.finditer(r'(?:19|20)\d{2}[a-z]?', content))
+        previous_end = 0
+        for year_match in year_matches:
+            author_text = content[previous_end:year_match.start()]
+            previous_end = year_match.end()
+            surnames = re.findall(r"[A-Z][A-Za-zÀ-ÖØ-öø-ÿ'’-]+", author_text)
+            if 'et al' in author_text.lower():
+                surnames = surnames[:1]
+            surnames = [surname for surname in surnames if len(surname) >= 2 and surname.lower() not in {'and', 'et', 'al'}]
+            surnames = list(dict.fromkeys(surname.lower() for surname in surnames))
+            if surnames:
+                citations.append({'type': 'author_year', 'authors': surnames, 'year': year_match.group(0).lower(),
+                                  'label': '(' + content + ')', 'position': match.start()})
+
+    narrative_pattern = re.compile(r"\b([A-Z][A-Za-zÀ-ÖØ-öø-ÿ'’-]+)\s*\((?:19|20)\d{2}[a-z]?\)")
+    for match in narrative_pattern.finditer(body_text):
+        year = re.search(r'(?:19|20)\d{2}[a-z]?', match.group(0)).group(0)
+        citations.append({'type': 'narrative', 'authors': [match.group(1).lower()], 'year': year.lower(),
+                          'label': match.group(0), 'position': match.start()})
+
+    numeric_citations = []
+    for match in re.finditer(r'\[([0-9]+(?:\s*(?:-|,)\s*[0-9]+)*)\]', body_text):
+        if re.search(r'-', match.group(1)) and int(re.search(r'\d+', match.group(1)).group(0)) >= 1000:
+            continue
+        keys = []
+        for part in re.split(r',', match.group(1)):
+            part = part.strip()
+            if '-' in part:
+                start_text, end_text = (value.strip() for value in part.split('-', 1))
+                if start_text.isdigit() and end_text.isdigit() and 0 < int(start_text) <= int(end_text) <= int(start_text) + 100:
+                    keys.extend(str(number) for number in range(int(start_text), int(end_text) + 1))
+            elif part.isdigit() and int(part) < 1000:
+                keys.append(part)
+        for key in keys:
+            numeric_citations.append({'label': '[' + match.group(1) + ']', 'key': key, 'position': match.start()})
+
+    uncited_references = []
+    referenced_keys = set()
+    for citation in citations:
+        matched = False
+        for surname in citation['authors']:
+            if (surname, citation['year']) in reference_by_key:
+                matched = True
+                referenced_keys.add((surname, citation['year']))
+        if not matched:
+            citation['matched'] = False
+        else:
+            citation['matched'] = True
+
+    for ref in references:
+        cited = any((author, ref['year'].lower()) in referenced_keys for author in ref['authors'])
+        if not cited:
+            uncited_references.append(ref)
+
+    unreferenced_citations = [citation for citation in citations if not citation['matched']]
+
+    reference_numbers = {ref['numeric_key']: ref for ref in references}
+    for citation in numeric_citations:
+        if citation['key'] in reference_numbers:
+            reference_numbers[citation['key']]['number_cited'] = True
+        else:
+            unreferenced_citations.append({'label': citation['label'], 'key': citation['key'], 'position': citation['position'], 'type': 'numeric', 'matched': False})
+    for ref in references:
+        if not ref.get('number_cited') and not ref['authors']:
+            uncited_references.append(ref)
+
+    # Remove numeric-key assumptions from uncited author references, then calculate author matches.
+    uncited_numeric = [ref for ref in references if reference_numbers.get(ref['numeric_key']) and ref.get('number_cited')]
+    for ref in uncited_numeric:
+        if ref in uncited_references:
+            uncited_references.remove(ref)
+
+    clean_refs = []
+    seen_refs = set()
+    for ref in uncited_references:
+        marker = ref['text'][:180].lower()
+        if marker not in seen_refs:
+            clean_refs.append(ref)
+            seen_refs.add(marker)
+
+    return jsonify({
+        'success': True,
+        'citation_count': len(citations) + len(numeric_citations),
+        'reference_count': len(references),
+        'uncited_references': clean_refs,
+        'unreferenced_citations': unreferenced_citations,
+        'pass': not clean_refs and not unreferenced_citations,
+        'summary': {
+            'matched_citations': len(citations) + len(numeric_citations) - len(unreferenced_citations),
+            'uncited_reference_count': len(clean_refs),
+            'unreferenced_citation_count': len(unreferenced_citations)
+        }
+    })
+
+
 @app.route('/api/sources/resolve', methods=['POST'])
 def api_resolve_sources():
     body = request.get_json(silent=True) or {}
