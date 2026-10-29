@@ -347,7 +347,8 @@ async function runDetect() {
   document.getElementById('detectIcon').textContent = '⟳';
   document.getElementById('detectTxt').textContent = 'Analyzing…';
 
-  document.getElementById('rightPanel').innerHTML = buildShimmer();
+  document.getElementById('rightPanel').innerHTML = buildAnalysisProgress();
+  animateAnalysisProgress();
   const refText = document.getElementById('refInput').value.trim();
   const sources = [];
 
@@ -390,13 +391,50 @@ function restoreBtn() {
 }
 
 function buildShimmer() {
-  return `<div class="score-card"><div style="padding:10px">
-    <div class="shimmer" style="height:170px;border-radius:50%;width:170px;margin:0 auto 24px"></div>
-    <div class="shimmer" style="margin-bottom:14px;width:60%;margin-left:auto;margin-right:auto"></div>
-    <div class="shimmer" style="margin-bottom:10px"></div>
-    <div class="shimmer" style="margin-bottom:10px;width:80%"></div>
-    <div class="shimmer" style="width:70%"></div>
-  </div></div>`;
+  return buildAnalysisProgress();
+}
+
+function buildAnalysisProgress() {
+  return `<div class="score-card analysis-progress-card">
+    <div class="analysis-progress-section">
+      <div class="analysis-progress-title"><span>✦</span> Analyzing writing style</div>
+      <ol class="analysis-progress-list">
+        <li>Reviewed your text</li>
+        <li>Referenced human writing patterns</li>
+        <li>Mapped sentence structure</li>
+        <li>Measured readability patterns</li>
+        <li>Traced AI fingerprints</li>
+        <li>Tested style consistency</li>
+      </ol>
+    </div>
+    <div class="analysis-progress-section">
+      <div class="analysis-progress-title"><span>◎</span> Scanning all sources</div>
+      <ol class="analysis-progress-list">
+        <li>Prepared document sources</li>
+        <li>Checked citation references</li>
+        <li>Resolved accessible URLs and DOIs</li>
+        <li>Compared detector signals</li>
+        <li>Matched document text locally</li>
+      </ol>
+    </div>
+  </div>`;
+}
+
+function animateAnalysisProgress() {
+  const lists = document.querySelectorAll('.analysis-progress-card .analysis-progress-list');
+  let step = 0;
+  lists.forEach(list => {
+    list.querySelectorAll('li').forEach((item, index) => {
+      window.setTimeout(() => {
+        item.classList.add('is-complete');
+        if(index === 0) item.classList.add('is-active');
+        if(index > 0) {
+          item.previousElementSibling?.classList.remove('is-active');
+          item.classList.add('is-active');
+        }
+      }, (step++ * 180) + 120);
+    });
+  });
 }
 
 function buildEmptyState() {

@@ -176,6 +176,18 @@ nav { border-bottom-color: rgba(226, 232, 240, .8) !important; }
 .upload-progress { display: flex; align-items: center; justify-content: center; gap: 9px; margin-top: 14px; color: var(--text-muted); font-size: .82rem; }
 .spinner { width: 17px; height: 17px; border: 2px solid rgba(99,102,241,.2); border-top-color: var(--brand-indigo); border-radius: 50%; animation: spin .75s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+.analysis-progress-card { padding: 22px; }
+.analysis-progress-section { border: 1px solid var(--border-subtle); border-radius: 14px; padding: 18px; background: var(--bg-input); }
+.analysis-progress-section + .analysis-progress-section { margin-top: 14px; }
+.analysis-progress-title { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; font-size: 0.92rem; font-weight: 800; color: var(--text-main); }
+.analysis-progress-title span { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; color: #fff; background: var(--brand-indigo); }
+.analysis-progress-list { list-style: none; margin: 0; padding: 0; counter-reset: progress-step; }
+.analysis-progress-list li { counter-increment: progress-step; display: flex; align-items: center; gap: 10px; min-height: 34px; color: var(--text-muted); font-size: 0.82rem; opacity: 0.55; transition: opacity 180ms ease, color 180ms ease; }
+.analysis-progress-list li::before { content: counter(progress-step, decimal); display: grid; place-items: center; width: 20px; height: 20px; flex: 0 0 20px; border-radius: 50%; border: 1px solid var(--border-subtle); font-size: 0.66rem; }
+.analysis-progress-list li.is-active, .analysis-progress-list li.is-complete { opacity: 1; color: var(--text-main); }
+.analysis-progress-list li.is-complete::before { content: '✓'; color: #fff; border-color: var(--accent-emerald); background: var(--accent-emerald); }
+.analysis-progress-list li.is-active::before { border-color: var(--brand-indigo); color: var(--brand-indigo); box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.10); }
 [hidden] { display: none !important; }
 
 #humanizerModal .modal-box { width: min(940px, calc(100vw - 48px)); }
