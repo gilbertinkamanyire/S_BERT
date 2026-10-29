@@ -510,6 +510,10 @@ function renderResults(d) {
       </div>
 
       <div class="verdict-desc-box">${verdictDesc}</div>
+      <div class="verdict-desc-box">
+        <strong>Detection confidence: ${Number(d.ai_confidence || m.confidence || 0).toFixed(0)}%</strong>
+        ${d.sample_warning ? `<br><span>${escapeHtml(d.sample_warning)}</span>` : '<br><span>Screening result based on local stylometric evidence; AI detectors are probabilistic.</span>'}
+      </div>
 
       <div class="score-ctas">
         <button class="cta-btn cta-primary" onclick="document.getElementById('heatmap-section').scrollIntoView({behavior:'smooth'})">

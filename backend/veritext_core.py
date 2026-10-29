@@ -293,6 +293,8 @@ def analyze_ai_content(text: str) -> Dict[str, Any]:
         "human_probability": result["human_probability"],
         "verdict": result["verdict"], "verdict_color": result["verdict_color"],
         "verdict_desc": result["verdict_desc"],
+        "confidence": result.get("confidence", 0.0),
+        "sample_warning": result.get("sample_warning", ""),
         "metrics": {
             "avg_ppl": metrics.get("avg_perplexity", 20.0),
             "burstiness": metrics.get("burstiness", 0.0),

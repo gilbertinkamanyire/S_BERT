@@ -814,6 +814,8 @@ def api_analyze():
         'verdict': ai_result['verdict'],
         'verdict_color': ai_result['verdict_color'],
         'verdict_desc': ai_result['verdict_desc'],
+        'ai_confidence': ai_result.get('confidence', 0.0),
+        'sample_warning': ai_result.get('sample_warning', ''),
         'ai_metrics': ai_result['metrics'],
         'detected_buzzwords': ai_result['detected_buzzwords'],
         'detected_phrases': ai_result['detected_phrases'],

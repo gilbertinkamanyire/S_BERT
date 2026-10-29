@@ -104,6 +104,13 @@ class VeritasFlaskTestCase(unittest.TestCase):
         self.assertGreater(data['ai_probability'], 0.0)
         print(f"[PASS] POST /api/scan (Single Doc): Checked Doc 1 alone, AI Prob = {data['ai_probability']}%")
 
+    def test_ai_detector_short_text_has_warning(self):
+        res = self.app.post('/api/detect-ai', json={'text': 'This paragraph has several ordinary words and an understandable idea.'})
+        self.assertEqual(res.status_code, 200)
+        result = res.get_json()['result']
+        self.assertIn('sample_warning', result)
+        self.assertGreater(result['confidence'], 0 or False)
+
     def test_humanizer_api(self):
         payload = {
             'text': 'In today\'s rapidly evolving digital landscape, it is crucial to delve into transformative technology. It plays a pivotal role in modern education.',

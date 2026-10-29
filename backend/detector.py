@@ -278,6 +278,17 @@ def classify_text_ai_probability(text: str, sentences: List[str]) -> Dict[str, A
     tokens = extract_tokens(text)
     total_words = len(tokens)
     sent_lengths = [len(s.split()) for s in sentences]
+    short_document = total_words < 80
+
+    # Structural signals are evidence, not proof. Repeated openings and a very
+    # narrow range of sentence lengths are more informative in longer documents.
+    openings = [re.sub(r'[^a-z]+', ' ', s.lower()).strip().split()[:1][0]
+                if re.sub(r'[^a-z]+', ' ', s.lower()).strip().split()
+                else '' for s in sentences]
+    opening_repeat_ratio = 1.0 - (len(set(openings)) / max(1, len(openings))) if len(openings) >= 4 else 0.0
+    mean_length = sum(sent_lengths) / max(1, len(sent_lengths))
+    length_cv = (math.sqrt(sum((x - mean_length) ** 2 for x in sent_lengths) / max(1, len(sent_lengths))) /
+                 max(1.0, mean_length))
 
     burstiness = calculate_burstiness(sent_lengths)
     lexical = calculate_lexical_metrics(tokens)
@@ -402,7 +413,23 @@ def classify_text_ai_probability(text: str, sentences: List[str]) -> Dict[str, A
     # Preserve the richer ensemble's other evidence, while making the two proposal
     # equations a substantial part of the final score.
     ensemble_ai = 1.0 / (1.0 + math.exp(-log_odds))
-    ai_prob = (0.70 * proposal_score) + (0.30 * ensemble_ai)
+    # Add observable discourse-rhythm evidence. It reduces reliance on GPT-2
+    # availability and catches monotonous repetitive output without treating
+    # vocabulary buzzwords as definitive proof by themselves.
+    structural_z = 0.0
+    if len(sentences) >= 4:
+        if opening_repeat_ratio >= 0.35:
+            structural_z += 1.1
+        if length_cv < 0.20:
+            structural_z += 1.2
+        elif length_cv > 0.55:
+            structural_z -= 0.8
+    structural_ai = 1.0 / (1.0 + math.exp(-structural_z))
+
+    ai_prob = (0.65 * proposal_score) + (0.25 * ensemble_ai) + (0.10 * structural_ai)
+    # Short samples are deliberately understated and reported with lower confidence.
+    if short_document:
+        ai_prob = 0.50 + ((ai_prob - 0.50) * 0.55)
     ai_prob = max(0.0, min(1.0, ai_prob))
     ai_prob_pct = round(ai_prob * 100.0, 1)
     human_prob_pct = round((1.0 - ai_prob) * 100.0, 1)
@@ -431,7 +458,8 @@ def classify_text_ai_probability(text: str, sentences: List[str]) -> Dict[str, A
         'verdict': verdict,
         'verdict_color': verdict_color,
         'verdict_desc': verdict_desc,
-        'confidence': round(abs(ai_prob_pct - 50.0) * 2.0, 1),
+        'confidence': round(min(abs(ai_prob_pct - 50.0) * 2.0, 100.0) * (0.55 if short_document else 1.0), 1),
+        'sample_warning': 'Short documents provide limited evidence; use this score as a screening signal, not proof.' if short_document else '',
         'metrics': {
             'avg_perplexity': round(avg_ppl, 1),
             'burstiness': burstiness,
@@ -448,7 +476,11 @@ def classify_text_ai_probability(text: str, sentences: List[str]) -> Dict[str, A
             'proposal_ai_score': round(proposal_score * 100.0, 1),
             'ensemble_ai_score': round(ensemble_ai * 100.0, 1),
             'perplexity_weight': 0.55,
-            'burstiness_weight': 0.45
+            'burstiness_weight': 0.45,
+            'opening_repeat_ratio': round(opening_repeat_ratio * 100.0, 1),
+            'sentence_length_coefficient_of_variation': round(length_cv, 3),
+            'structural_ai_score': round(structural_ai * 100.0, 1),
+            'word_count': total_words
         },
         'detected_buzzwords': markers['buzzwords'],
         'detected_phrases': markers['phrases'],
