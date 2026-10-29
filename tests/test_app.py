@@ -119,6 +119,16 @@ class VeritasFlaskTestCase(unittest.TestCase):
         self.assertEqual(data['options']['intensity'], 3)
         print('[PASS] POST /api/humanize: Produced local rewritten prose')
 
+    def test_automatic_source_resolution_from_document(self):
+        text = """References
+Smith, J. (2020). https://example.com/article
+Doe, R. (2021). https://doi.org/10.1234/example"""
+        res = self.app.post('/api/sources/resolve', json={'text': text})
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertTrue(data['success'])
+        self.assertGreaterEqual(len(data['sources']), 2)
+
     def test_citation_reference_audit_author_year(self):
         text = """This result is supported by Smith (2020) and multiple studies (Jones, 2019; Brown & Lee, 2021).
 References

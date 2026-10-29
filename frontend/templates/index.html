@@ -266,20 +266,30 @@ function updateCounts() {
   document.getElementById('sCount').textContent = sents;
 }
 
-document.getElementById('mainInput').addEventListener('input', updateCounts);
+let automaticAuditTimer = null;
+document.getElementById('mainInput').addEventListener('input', function() {
+  updateCounts();
+  clearTimeout(automaticAuditTimer);
+  automaticAuditTimer = setTimeout(() => {
+    if(document.getElementById('mainInput').value.trim().length > 30) {
+      checkCitationReferences();
+      checkCitedSources();
+    }
+  }, 900);
+});
 
 // ─── Main Forensic Analysis Engine ───────────────────────────────
 async function checkCitedSources() {
   const status = document.getElementById('sourceCheckStatus');
-  const sources = document.getElementById('sourceCitations').value.split(/\n/).map(item => item.trim()).filter(Boolean);
-  if(!sources.length) {
-    status.innerHTML = '<span class="source-state source-missing">Enter a URL, DOI, or citation to check.</span>';
+  const text = document.getElementById('mainInput').value.trim();
+  if(!text) {
+    status.innerHTML = '<span class="source-state source-checking">Automatic source checking will begin when a document is entered.</span>';
     return;
   }
-  status.innerHTML = '<span class="source-state source-checking">Verifying and locating cited sources…</span>';
+  status.innerHTML = '<span class="source-state source-checking">Automatically verifying cited sources…</span>';
   try {
     const res = await fetch('/api/sources/resolve', {
-      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ sources })
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ text })
     });
     const data = await res.json();
     if(!res.ok || !data.success) throw new Error(data.error || 'Source verification failed');
@@ -339,7 +349,7 @@ async function runDetect() {
 
   document.getElementById('rightPanel').innerHTML = buildShimmer();
   const refText = document.getElementById('refInput').value.trim();
-  const sources = document.getElementById('sourceCitations').value.split(/\n/).map(item => item.trim()).filter(Boolean);
+  const sources = [];
 
   try {
     await checkCitationReferences();

@@ -528,6 +528,22 @@ def api_check_citations():
 def api_resolve_sources():
     body = request.get_json(silent=True) or {}
     raw_sources = body.get('sources', [])
+    document_text = str(body.get('text', '')).strip()
+    if not raw_sources and document_text:
+        reference_match = re.search(
+            r'(?im)^\s*(references|bibliography|works cited|list of references)\s*$\s*(.*)',
+            document_text,
+            flags=re.DOTALL,
+        )
+        reference_text = reference_match.group(2) if reference_match else document_text
+        raw_sources = []
+        raw_sources.extend(re.findall(r'https?://[^\s<>]+', reference_text, flags=re.I))
+        raw_sources.extend('https://doi.org/' + value for value in re.findall(r'10\.\d{4,9}/[-._;()/:A-Z0-9]+', reference_text, flags=re.I))
+        if not raw_sources:
+            # Treat reference-list lines as citation strings when no URL/DOI is embedded.
+            raw_sources = [line.strip() for line in reference_text.splitlines()
+                           if line.strip() and re.search(r'(?:19|20)\d{2}', line)]
+        raw_sources = list(dict.fromkeys(item.rstrip('.,;') for item in raw_sources))[:20]
     if isinstance(raw_sources, str):
         raw_sources = [line.strip() for line in raw_sources.splitlines() if line.strip()]
     if not isinstance(raw_sources, list):

@@ -32,11 +32,9 @@
       </div>
       <textarea id="refInput" placeholder="Optional manual source text (leave empty when using cited sources below)..."></textarea>
       <div class="citation-source-box">
-        <label for="sourceCitations"><strong>Cited sources</strong> — enter one URL, DOI, or citation per line</label>
-        <textarea id="sourceCitations" rows="4" placeholder="https://doi.org/10.1000/example&#10;Author, A. (2024). The source title. Journal Name.&#10;https://publisher.example.org/article"></textarea>
-        <button type="button" class="action-btn source-check-btn" onclick="checkCitedSources()">Check cited sources</button>
+        <label><strong>Automatic source & citation audit</strong></label>
+        <p class="automatic-audit-note">Veritext automatically reads reference URLs, DOIs, citation strings, and in-text citations from the document.</p>
         <div id="sourceCheckStatus" class="source-check-status" aria-live="polite"></div>
-        <button type="button" class="action-btn source-check-btn" onclick="checkCitationReferences()">Audit citations & references</button>
         <div id="citationAuditStatus" class="source-check-status" aria-live="polite"></div>
       </div>
     </div>

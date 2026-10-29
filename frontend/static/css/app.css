@@ -270,6 +270,13 @@ textarea, select, input { border-radius: 10px !important; }
 .citation-source-box label { display: block; margin-bottom: 8px; color: var(--text-muted); font-size: .78rem; }
 .citation-source-box textarea { min-height: 92px; }
 .source-check-btn { margin-top: 10px; }
+.automatic-audit-note {
+  margin: 0.25rem 0 0.65rem;
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
 .source-check-status { display: grid; gap: 8px; margin-top: 12px; }
 .source-state { display: block; padding: 10px 12px; border-radius: 9px; font-size: .76rem; line-height: 1.45; }
 .source-found { color: #047857; border: 1px solid rgba(16,185,129,.25); background: rgba(16,185,129,.08); }
